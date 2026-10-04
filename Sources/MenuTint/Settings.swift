@@ -1,0 +1,76 @@
+import AppKit
+
+/// User preferences, persisted in UserDefaults.
+final class Settings {
+    static let shared = Settings()
+
+    private let defaults = UserDefaults.standard
+
+    private enum Key {
+        static let enabled = "enabled"
+        static let colorHex = "colorHex"
+        static let rainbow = "rainbow"
+        static let sensitivity = "sensitivity"
+        static let intensity = "intensity"
+    }
+
+    var enabled: Bool {
+        get { defaults.object(forKey: Key.enabled) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Key.enabled) }
+    }
+
+    /// Tint colour as "#RRGGBB" (sRGB).
+    var colorHex: String {
+        get { defaults.string(forKey: Key.colorHex) ?? "#32ADE6" }
+        set { defaults.set(newValue, forKey: Key.colorHex) }
+    }
+
+    /// When true, a rainbow gradient is used instead of `colorHex`.
+    var rainbow: Bool {
+        get { defaults.object(forKey: Key.rainbow) as? Bool ?? false }
+        set { defaults.set(newValue, forKey: Key.rainbow) }
+    }
+
+    /// 0...1 — higher values also recolour dimmer (grey) items.
+    var sensitivity: Double {
+        get { defaults.object(forKey: Key.sensitivity) as? Double ?? 0.5 }
+        set { defaults.set(newValue, forKey: Key.sensitivity) }
+    }
+
+    /// 0...1 — how much of the tint is applied.
+    var intensity: Double {
+        get { defaults.object(forKey: Key.intensity) as? Double ?? 1.0 }
+        set { defaults.set(newValue, forKey: Key.intensity) }
+    }
+
+    var color: NSColor {
+        NSColor(hex: colorHex) ?? .systemTeal
+    }
+
+    /// Brightness (0...1) above which a pixel counts as a "white" menu bar item.
+    var threshold: Double {
+        0.95 - 0.55 * sensitivity
+    }
+}
+
+extension NSColor {
+    convenience init?(hex: String) {
+        var string = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        if string.hasPrefix("#") { string.removeFirst() }
+        guard string.count == 6, let value = UInt32(string, radix: 16) else { return nil }
+        self.init(
+            srgbRed: CGFloat((value >> 16) & 0xFF) / 255,
+            green: CGFloat((value >> 8) & 0xFF) / 255,
+            blue: CGFloat(value & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+
+    var hexString: String {
+        let color = usingColorSpace(.sRGB) ?? .white
+        func byte(_ component: CGFloat) -> Int {
+            Int((min(max(component, 0), 1) * 255).rounded())
+        }
+        return String(format: "#%02X%02X%02X", byte(color.redComponent), byte(color.greenComponent), byte(color.blueComponent))
+    }
+}

@@ -1,0 +1,23 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build MenuTint.app
+        run: ./scripts/build-app.sh
+
+      - name: Zip
+        run: ditto -c -k --keepParent build/MenuTint.app build/MenuTint.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MenuTint
+          path: build/MenuTint.zip
