@@ -9,28 +9,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let delegate = AppDelegate()
         app.delegate = delegate
         app.setActivationPolicy(.accessory)
+        app.mainMenu = makeEditMenu()
         withExtendedLifetime(delegate) {
             app.run()
         }
     }
-
-    private struct Preset {
-        let name: String
-        let hex: String
-    }
-
-    private let presets = [
-        Preset(name: "Kırmızı", hex: "#FF453A"),
-        Preset(name: "Turuncu", hex: "#FF9F0A"),
-        Preset(name: "Sarı", hex: "#FFD60A"),
-        Preset(name: "Altın", hex: "#E6C35C"),
-        Preset(name: "Yeşil", hex: "#30D158"),
-        Preset(name: "Nane", hex: "#63E6BE"),
-        Preset(name: "Turkuaz", hex: "#32ADE6"),
-        Preset(name: "Mavi", hex: "#0A84FF"),
-        Preset(name: "Mor", hex: "#BF5AF2"),
-        Preset(name: "Pembe", hex: "#FF375F"),
-    ]
 
     private var statusItem: NSStatusItem!
     private let controller = TintController()
@@ -78,18 +61,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        menu.addItem(disabledItem("Renk"))
+        menu.addItem(disabledItem("Renk Paleti"))
 
-        var matchedPreset = false
-        for preset in presets {
-            let item = actionItem(preset.name, #selector(selectPreset(_:)))
-            item.representedObject = preset.hex
-            item.image = swatch(NSColor(hex: preset.hex) ?? .white)
-            if !settings.rainbow && settings.colorHex.caseInsensitiveCompare(preset.hex) == .orderedSame {
-                item.state = .on
-                matchedPreset = true
-            }
-            menu.addItem(item)
+        // Colours picked from the system picker or typed as a code end up in "recent".
+        if !settings.rainbow && !Self.paletteContains(settings.colorHex) {
+            settings.addRecentColor(settings.colorHex)
+        }
+        let selectedHex = settings.rainbow ? nil : settings.colorHex
+
+        // Weak, so the grids' closures don't keep the grids alive after the menu is rebuilt.
+        let grids = NSHashTable<ColorGridView>.weakObjects()
+        let onSelect: (String) -> Void = { [weak self] hex in
+            grids.allObjects.forEach { $0.selectedHex = hex }
+            self?.applyColor(hex)
+        }
+        let paletteGrid = ColorGridView(rows: ColorGridView.palette)
+        grids.add(paletteGrid)
+        menu.addItem(viewItem(paletteGrid))
+
+        let recents = settings.recentColors
+        if !recents.isEmpty {
+            menu.addItem(disabledItem("Son Kullanılanlar"))
+            let recentGrid = ColorGridView(rows: [recents])
+            grids.add(recentGrid)
+            menu.addItem(viewItem(recentGrid))
+        }
+        for grid in grids.allObjects {
+            grid.selectedHex = selectedHex
+            grid.onSelect = onSelect
         }
 
         let rainbow = actionItem("Gökkuşağı", #selector(selectRainbow))
@@ -97,12 +96,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         rainbow.state = settings.rainbow ? .on : .off
         menu.addItem(rainbow)
 
-        let custom = actionItem("Özel Renk…", #selector(pickCustomColor))
-        if !settings.rainbow && !matchedPreset {
-            custom.state = .on
-            custom.image = swatch(settings.color)
+        let hexItem = actionItem("Renk Kodu Gir…", #selector(enterHexCode))
+        if !settings.rainbow {
+            hexItem.title = "Renk Kodu Gir…  (\(settings.colorHex))"
+            hexItem.image = swatch(settings.color)
         }
-        menu.addItem(custom)
+        menu.addItem(hexItem)
+
+        menu.addItem(actionItem("Gelişmiş Renk Seçici…", #selector(pickCustomColor)))
 
         menu.addItem(.separator())
         menu.addItem(sliderItem(title: "Yoğunluk", value: settings.intensity) { [weak self] value in
@@ -141,11 +142,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         controller.reload()
     }
 
-    @objc private func selectPreset(_ sender: NSMenuItem) {
-        guard let hex = sender.representedObject as? String else { return }
+    private func applyColor(_ hex: String) {
         Settings.shared.colorHex = hex
         Settings.shared.rainbow = false
         controller.applyStyle()
+    }
+
+    @objc private func enterHexCode() {
+        let settings = Settings.shared
+        let originalHex = settings.colorHex
+        let originalRainbow = settings.rainbow
+        let chosen = HexEntry.run(initialHex: originalHex) { [weak self] hex in
+            self?.applyColor(hex)
+        }
+        if let chosen {
+            applyColor(chosen)
+            if !Self.paletteContains(chosen) {
+                settings.addRecentColor(chosen)
+            }
+        } else {
+            // Cancelled: undo the live preview.
+            settings.colorHex = originalHex
+            settings.rainbow = originalRainbow
+            controller.applyStyle()
+        }
     }
 
     @objc private func selectRainbow() {
@@ -165,9 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func colorPanelChanged(_ sender: NSColorPanel) {
-        Settings.shared.colorHex = sender.color.hexString
-        Settings.shared.rainbow = false
-        controller.applyStyle()
+        applyColor(sender.color.hexString)
     }
 
     @objc private func toggleLaunchAtLogin() {
@@ -213,6 +231,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
         return item
+    }
+
+    private func viewItem(_ view: NSView) -> NSMenuItem {
+        let item = NSMenuItem()
+        item.view = view
+        return item
+    }
+
+    private static func paletteContains(_ hex: String) -> Bool {
+        ColorGridView.palette.contains { row in
+            row.contains { $0.caseInsensitiveCompare(hex) == .orderedSame }
+        }
+    }
+
+    /// Menu bar apps have no visible main menu, but text fields still need
+    /// it for Cmd+X / Cmd+C / Cmd+V / Cmd+A / Cmd+Z.
+    private static func makeEditMenu() -> NSMenu {
+        let mainMenu = NSMenu()
+        let editItem = NSMenuItem()
+        let edit = NSMenu(title: "Düzen")
+        edit.addItem(withTitle: "Geri Al", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Yinele", action: Selector(("redo:")), keyEquivalent: "Z")
+        edit.addItem(.separator())
+        edit.addItem(withTitle: "Kes", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Kopyala", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Yapıştır", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Tümünü Seç", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editItem.submenu = edit
+        mainMenu.addItem(editItem)
+        return mainMenu
     }
 
     private func sliderItem(title: String, value: Double, onChange: @escaping (Double) -> Void) -> NSMenuItem {

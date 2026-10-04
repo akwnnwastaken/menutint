@@ -2,7 +2,10 @@
 
 macOS menü çubuğundaki **beyaz** simgeleri ve yazıları (saat, Wi‑Fi, pil, uygulama menüleri, üçüncü parti simgeler…) istediğin renge boyayan küçük bir menü çubuğu uygulaması.
 
-- 10 hazır renk + **Özel Renk…** (sistem renk seçici) + **Gökkuşağı** modu
+- Menü içinde **84 renklik palet** (tıkladığın an uygulanır, menü açık kalır)
+- **Renk kodu girme** (`#FF8800`, `FF8800`, `#F80`): yazarken canlı önizleme
+- **Gelişmiş Renk Seçici** (macOS renk tekerleği, kaydırıcılar, damlalık)
+- **Son Kullanılanlar** satırı ve **Gökkuşağı** modu
 - **Yoğunluk**: rengin ne kadar güçlü uygulanacağı
 - **Hassasiyet**: yükseldikçe sönük/gri öğeler de boyanır
 - Birden fazla ekran desteği, girişte otomatik başlatma
@@ -58,7 +61,11 @@ Menü çubuğundaki palet simgesine tıkla:
 | Öğe | Ne yapar |
 | --- | --- |
 | Renklendirme Açık | Boyamayı açar/kapatır |
-| Renkler / Gökkuşağı / Özel Renk… | Kullanılacak rengi seçer |
+| Renk Paleti | 84 renkten birine tıkla; menü açık kalır, renkleri hızlıca deneyebilirsin |
+| Son Kullanılanlar | Kod ile girdiğin veya gelişmiş seçiciden aldığın renkler |
+| Gökkuşağı | Menü çubuğu boyunca renk geçişi |
+| Renk Kodu Gir… | Hex kod yaz (`#FF8800`, `FF8800`, `#F80`). Yazarken önizlenir, Vazgeç eski renge döner |
+| Gelişmiş Renk Seçici… | macOS renk paneli: tekerlek, RGB/HSB kaydırıcıları, ekrandan renk alma |
 | Yoğunluk | %0 = orijinal beyaz, %100 = tam renk |
 | Hassasiyet | Gri/sönük öğelerin de boyanması için artır; duvar kağıdındaki açık alanlar boyanıyorsa azalt |
 | Girişte Başlat | Mac açılınca otomatik başlar (uygulama `/Applications` içinde olmalı) |
@@ -83,4 +90,6 @@ Sources/MenuTint/
   MaskLUT.swift          hangi piksellerin "beyaz" sayılacağını belirleyen 3B renk tablosu
   Settings.swift         kalıcı ayarlar
   SliderMenuView.swift   menü içi kaydırıcı
+  ColorGridView.swift    menü içi renk paleti
+  HexEntry.swift         renk kodu giriş penceresi
 ```

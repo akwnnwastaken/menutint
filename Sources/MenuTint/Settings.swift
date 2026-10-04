@@ -12,6 +12,7 @@ final class Settings {
         static let rainbow = "rainbow"
         static let sensitivity = "sensitivity"
         static let intensity = "intensity"
+        static let recentColors = "recentColors"
     }
 
     var enabled: Bool {
@@ -43,6 +44,20 @@ final class Settings {
         set { defaults.set(newValue, forKey: Key.intensity) }
     }
 
+    /// Custom colours used recently (newest first).
+    var recentColors: [String] {
+        get { defaults.stringArray(forKey: Key.recentColors) ?? [] }
+        set { defaults.set(Array(newValue.prefix(Self.maxRecentColors)), forKey: Key.recentColors) }
+    }
+
+    static let maxRecentColors = 12
+
+    func addRecentColor(_ hex: String) {
+        var colors = recentColors.filter { $0.caseInsensitiveCompare(hex) != .orderedSame }
+        colors.insert(hex.uppercased(), at: 0)
+        recentColors = colors
+    }
+
     var color: NSColor {
         NSColor(hex: colorHex) ?? .systemTeal
     }
@@ -57,6 +72,10 @@ extension NSColor {
     convenience init?(hex: String) {
         var string = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         if string.hasPrefix("#") { string.removeFirst() }
+        if string.count == 3 {
+            // #RGB → #RRGGBB
+            string = string.map { "\($0)\($0)" }.joined()
+        }
         guard string.count == 6, let value = UInt32(string, radix: 16) else { return nil }
         self.init(
             srgbRed: CGFloat((value >> 16) & 0xFF) / 255,
