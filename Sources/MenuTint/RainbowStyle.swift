@@ -35,9 +35,11 @@ enum RainbowStyle: String, CaseIterable {
         switch self {
         case .classic: return Self.hues(saturation: 0.75, brightness: 1)
         case .pastel: return Self.hues(saturation: 0.35, brightness: 1)
-        case .deep: return Self.hues(saturation: 0.95, brightness: 0.65)
+        case .deep: return Self.hues(luminance: 0.11)
         case .neon: return Self.hues(saturation: 1, brightness: 1)
-        case .darkPurple: return Self.colors("#5A189A", "#7B2CBF", "#3C096C", "#6A0DAD", "#4B0082")
+        // Dark purples with neighbouring indigo/blue and plum, plus a couple of
+        // lighter tones so the flow stays visible.
+        case .darkPurple: return Self.colors("#26359E", "#3F37C9", "#5A189A", "#7B2CBF", "#9D4EDD", "#8E3B9E", "#6A0DAD", "#3C096C")
         case .sunset: return Self.colors("#FF9500", "#FF5E3A", "#FF2D55", "#C643FC")
         case .ocean: return Self.colors("#34E0D0", "#00C6FF", "#0072FF", "#5856D6")
         case .forest: return Self.colors("#A8E063", "#34C759", "#0B8A3E", "#6BCB77")
@@ -59,6 +61,22 @@ enum RainbowStyle: String, CaseIterable {
 
     private static func hues(saturation: CGFloat, brightness: CGFloat) -> [NSColor] {
         (0..<12).map { NSColor(hue: CGFloat($0) / 12, saturation: saturation, brightness: brightness, alpha: 1) }
+    }
+
+    /// Fully saturated hues darkened to the same perceived lightness (linear
+    /// luminance `target`), so yellow, green and cyan don't look much lighter than
+    /// blue and purple. Hues already darker than that are left as they are.
+    private static func hues(luminance target: CGFloat) -> [NSColor] {
+        func linear(_ v: CGFloat) -> CGFloat { v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+        func encoded(_ v: CGFloat) -> CGFloat { v <= 0.0031308 ? v * 12.92 : 1.055 * pow(v, 1 / 2.4) - 0.055 }
+        return (0..<12).map { step in
+            let pure = NSColor(hue: CGFloat(step) / 12, saturation: 1, brightness: 1, alpha: 1)
+                .usingColorSpace(.sRGB) ?? .white
+            let r = linear(pure.redComponent), g = linear(pure.greenComponent), b = linear(pure.blueComponent)
+            let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            let scale = min(1, target / max(luminance, 0.0001))
+            return NSColor(srgbRed: encoded(r * scale), green: encoded(g * scale), blue: encoded(b * scale), alpha: 1)
+        }
     }
 
     private static func colors(_ hexes: String...) -> [NSColor] {
