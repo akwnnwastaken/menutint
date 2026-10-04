@@ -14,6 +14,14 @@ jobs:
       - name: Build MenuTint.app
         run: ./scripts/build-app.sh
 
+      - name: Check stable signing setup
+        run: |
+          ./scripts/create-signing-cert.sh
+          ./scripts/create-signing-cert.sh
+          ./scripts/build-app.sh --native
+          codesign -dv build/MenuTint.app 2>&1 | grep "Authority=MenuTint Self-Signed"
+          ./scripts/build-app.sh
+
       - name: Zip
         run: ditto -c -k --keepParent build/MenuTint.app build/MenuTint.zip
 

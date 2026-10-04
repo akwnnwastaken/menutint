@@ -29,8 +29,9 @@ Arka plan, duvar kağıdı ve zaten renkli olan simgeler (ör. yeşil pil) oldu�
 ## Kurulum
 
 ```bash
-git clone https://github.com/akwnnwastaken/menutint.git
+git clone -b claude/amazing-cerf-rwjwoj https://github.com/akwnnwastaken/menutint.git
 cd menutint
+./scripts/create-signing-cert.sh   # bir kez: izin her derlemede sıfırlanmasın
 ./scripts/build-app.sh          # Apple Silicon + Intel (tam Xcode gerekir)
 # ./scripts/build-app.sh --native   # sadece bu Mac'in mimarisi (Command Line Tools yeterli)
 mv build/MenuTint.app /Applications/
@@ -76,7 +77,7 @@ Menü çubuğundaki palet simgesine tıkla:
 - Menü çubuğu **otomatik gizleniyorsa** veya o ekranda menü çubuğu yoksa o ekran atlanır.
 - Yakalama yapıldığı için macOS menü çubuğunda mor bir **ekran kaydı göstergesi** gösterebilir. macOS 15 ve sonrasında da arada bir izni yeniden onaylamanı isteyebilir.
 - Bir simge değiştiği anda (ör. saat dakikası) boyalı katman bir kare (~16 ms) geriden gelebilir.
-- Uygulamayı her yeniden derlediğinde imza değiştiği için Ekran Kaydı iznini kapatıp tekrar açman gerekebilir.
+- `create-signing-cert.sh` çalıştırılmadıysa her derlemede imza değişir ve Ekran Kaydı iznini sıfırlayıp yeniden vermen gerekir (`tccutil reset ScreenCapture io.github.akwnnwastaken.menutint`).
 
 ## Proje yapısı
 

@@ -18,7 +18,14 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/MenuTint" "$APP/Contents/MacOS/MenuTint"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 
-# Ad-hoc signature so macOS can remember the Screen Recording permission.
-codesign --force --sign - "$APP"
+# With a stable identity (see create-signing-cert.sh) macOS keeps the Screen
+# Recording permission across rebuilds; an ad-hoc signature changes every build.
+IDENTITY="MenuTint Self-Signed"
+if security find-identity -p codesigning 2>/dev/null | grep "$IDENTITY" >/dev/null; then
+    codesign --force --sign "$IDENTITY" "$APP"
+else
+    codesign --force --sign - "$APP"
+    echo "Not: Ekran Kaydı izninin her derlemede sıfırlanmaması için bir kez ./scripts/create-signing-cert.sh çalıştır."
+fi
 
 echo "Hazır: $APP"
