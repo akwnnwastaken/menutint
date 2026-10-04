@@ -100,7 +100,7 @@ final class MenuBarTinter {
             delegate: processor
         )
         let itemsConfig = makeConfiguration()
-        itemsConfig.backgroundColor = CGColor(gray: 0, alpha: 1)
+        itemsConfig.backgroundColor = Self.black
         let itemsStream = SCStream(
             filter: SCContentFilter(display: display, including: items),
             configuration: itemsConfig,
@@ -194,6 +194,10 @@ final class MenuBarTinter {
         hostLayer.contents = image
         CATransaction.commit()
     }
+
+    /// `SCStreamConfiguration.backgroundColor` does not retain the colour it is
+    /// given, so it must outlive every configuration that uses it.
+    private static let black = CGColor(gray: 0, alpha: 1)
 
     private static func menuBarHeight(on screen: NSScreen) -> CGFloat {
         let reserved = screen.frame.maxY - screen.visibleFrame.maxY
