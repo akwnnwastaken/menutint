@@ -278,6 +278,20 @@ final class MenuBarTinter {
         CATransaction.commit()
     }
 
+    func stop() {
+        stopped = true
+        let stoppingProcessor = processor
+        for stream in [sceneStream, itemsStream].compactMap({ $0 }) {
+            stream.stopCapture { _ in
+                withExtendedLifetime(stoppingProcessor) {}
+            }
+        }
+        sceneStream = nil
+        itemsStream = nil
+        processor = nil
+        window.orderOut(nil)
+    }
+
     private func present(_ output: TintRenderer.Output) {
         guard !stopped else { return }
         CATransaction.begin()
