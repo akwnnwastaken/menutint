@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Sürüm etiketi (ör. v1.0.0)"
+        required: true
 
 permissions:
   contents: write
@@ -23,6 +28,10 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          # Manual runs create the tag on the commit being built.
+          tag_name: ${{ inputs.version || github.ref_name }}
+          name: MenuTint ${{ inputs.version || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           files: build/MenuTint.zip
           generate_release_notes: true
           body: |
