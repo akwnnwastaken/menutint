@@ -27,6 +27,8 @@ final class MenuBarTinter {
     private var stream: SCStream?
     private var processor: FrameProcessor?
     private var stopped = false
+    private var display: SCDisplay?
+    private var currentWindowIDs: Set<CGWindowID> = []
 
     init?(screen: NSScreen) {
         guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
@@ -69,10 +71,14 @@ final class MenuBarTinter {
         self.hostLayer = layer
     }
 
-    /// Starts capturing. `overlays` are the SCWindows of all MenuTint overlays,
-    /// which must be excluded so the overlay never captures itself.
-    func start(display: SCDisplay, excluding overlays: [SCWindow], maskCube: Data, fill: TintRenderer.Fill) async throws {
+    /// Starts capturing the menu bar windows (status items, app menus) of `display`.
+    /// The wallpaper and other apps are never captured, so they can't be tinted.
+    func start(display: SCDisplay, content: SCShareableContent, overlayIDs: Set<CGWindowID>, maskCube: Data, fill: TintRenderer.Fill) async throws {
         guard !stopped else { return }
+
+        let windows = menuBarWindows(in: content, display: display, overlayIDs: overlayIDs)
+        currentWindowIDs = Set(windows.map(\.windowID))
+        self.display = display
 
         let config = SCStreamConfiguration()
         config.sourceRect = captureRect
@@ -80,6 +86,7 @@ final class MenuBarTinter {
         config.height = Int((captureRect.height * scale).rounded())
         config.pixelFormat = kCVPixelFormatType_32BGRA
         config.colorSpaceName = CGColorSpace.sRGB
+        config.backgroundColor = CGColor(gray: 0, alpha: 1)
         config.showsCursor = false
         config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
         config.queueDepth = 5
@@ -94,7 +101,7 @@ final class MenuBarTinter {
                 DispatchQueue.main.async { self?.onStreamStopped?() }
             }
         )
-        let filter = SCContentFilter(display: display, excludingWindows: overlays)
+        let filter = SCContentFilter(display: display, including: windows)
         let stream = SCStream(filter: filter, configuration: config, delegate: processor)
         try stream.addStreamOutput(processor, type: .screen, sampleHandlerQueue: processor.queue)
         self.stream = stream
@@ -103,6 +110,39 @@ final class MenuBarTinter {
         try await stream.startCapture()
         if stopped {
             try? await stream.stopCapture()
+        }
+    }
+
+    /// Picks up status items that appeared or disappeared since the last call.
+    func refreshWindows(content: SCShareableContent, overlayIDs: Set<CGWindowID>) {
+        guard !stopped, let stream, let display else { return }
+        let windows = menuBarWindows(in: content, display: display, overlayIDs: overlayIDs)
+        let ids = Set(windows.map(\.windowID))
+        guard ids != currentWindowIDs else { return }
+        currentWindowIDs = ids
+        stream.updateContentFilter(SCContentFilter(display: display, including: windows)) { error in
+            if let error {
+                NSLog("MenuTint: could not update capture filter: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Windows that live entirely inside this display's menu bar strip:
+    /// the menu bar itself (app menus) and every status item.
+    private func menuBarWindows(in content: SCShareableContent, display: SCDisplay, overlayIDs: Set<CGWindowID>) -> [SCWindow] {
+        // SCWindow / SCDisplay frames use global coordinates with a top-left origin.
+        let strip = CGRect(
+            x: display.frame.minX,
+            y: display.frame.minY,
+            width: display.frame.width,
+            height: captureRect.height
+        ).insetBy(dx: 0, dy: -2)
+        return content.windows.filter { window in
+            !overlayIDs.contains(window.windowID)
+                && (20..<100).contains(window.windowLayer)
+                && window.frame.width > 0
+                && window.frame.height > 0
+                && strip.contains(window.frame)
         }
     }
 

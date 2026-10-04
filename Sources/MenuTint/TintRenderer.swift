@@ -3,6 +3,7 @@ import Foundation
 
 /// Turns a captured menu bar frame into an overlay image that contains only the
 /// recoloured items (everything else is transparent).
+/// The input is expected to contain only the menu bar's own windows over black.
 ///
 /// Not thread-safe: use it from a single queue.
 final class TintRenderer {
@@ -31,12 +32,9 @@ final class TintRenderer {
     func render(_ input: CIImage) -> CGImage? {
         let extent = input.extent
 
-        // Greyscale weight map: how much of each pixel gets recoloured.
+        // Greyscale coverage map: how much of each pixel becomes the tint colour.
         maskFilter.setValue(input, forKey: kCIInputImageKey)
         guard let mask = maskFilter.outputImage else { return nil }
-
-        // Keep the original brightness so anti-aliasing and dimmed items survive.
-        let luminance = input.applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 0])
 
         let color: CIImage
         switch fill {
@@ -46,10 +44,8 @@ final class TintRenderer {
             color = Self.rainbow(covering: extent)
         }
 
-        let tinted = color.applyingFilter("CIMultiplyCompositing", parameters: [
-            kCIInputBackgroundImageKey: luminance,
-        ])
-        let output = tinted.applyingFilter("CIBlendWithMask", parameters: [
+        // Paint the items in exactly the chosen colour; everything else stays transparent.
+        let output = color.applyingFilter("CIBlendWithMask", parameters: [
             kCIInputBackgroundImageKey: CIImage(color: .clear).cropped(to: extent),
             kCIInputMaskImageKey: mask,
         ])

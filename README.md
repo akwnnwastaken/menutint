@@ -15,11 +15,11 @@ macOS menü çubuğundaki **beyaz** simgeleri ve yazıları (saat, Wi‑Fi, pil,
 
 macOS, başka uygulamaların menü çubuğu simgelerinin rengini değiştirmek için genel bir API sunmuyor. MenuTint bu yüzden:
 
-1. Menü çubuğu şeridini **ScreenCaptureKit** ile yakalar (yalnızca menü çubuğu kadar bir alan, sadece değişiklik olduğunda),
-2. Parlak ve renksiz (beyaz/açık gri) pikselleri seçip seçtiğin renkle boyar (Core Image, GPU),
+1. **ScreenCaptureKit** ile yalnızca menü çubuğunun kendi pencerelerini (durum simgeleri, uygulama menüleri) yakalar. Duvar kağıdı ve diğer uygulamalar yakalanmaz, dolayısıyla boyanmaz,
+2. Beyaz/gri pikselleri doğrudan seçtiğin renge çevirir (Core Image, GPU),
 3. Sonucu menü çubuğunun hemen üstündeki şeffaf, tıklamaları geçiren bir pencerede gösterir.
 
-Arka plan, duvar kağıdı ve zaten renkli olan simgeler olduğu gibi kalır.
+Arka plan, duvar kağıdı ve zaten renkli olan simgeler (ör. yeşil pil) olduğu gibi kalır.
 
 ## Gereksinimler
 
@@ -67,7 +67,7 @@ Menü çubuğundaki palet simgesine tıkla:
 | Renk Kodu Gir… | Hex kod yaz (`#FF8800`, `FF8800`, `#F80`). Yazarken önizlenir, Vazgeç eski renge döner |
 | Gelişmiş Renk Seçici… | macOS renk paneli: tekerlek, RGB/HSB kaydırıcıları, ekrandan renk alma |
 | Yoğunluk | %0 = orijinal beyaz, %100 = tam renk |
-| Hassasiyet | Gri/sönük öğelerin de boyanması için artır; duvar kağıdındaki açık alanlar boyanıyorsa azalt |
+| Hassasiyet | Gri/sönük öğelerin de boyanması için artır; kenarlar fazla kalın görünüyorsa azalt |
 | Girişte Başlat | Mac açılınca otomatik başlar (uygulama `/Applications` içinde olmalı) |
 
 ## Bilinen sınırlamalar
