@@ -5,7 +5,7 @@ macOS menü çubuğundaki **beyaz** simgeleri ve yazıları (saat, Wi‑Fi, pil,
 - Menü içinde **84 renklik palet** (tıkladığın an uygulanır, menü açık kalır)
 - **Renk kodu girme** (`#FF8800`, `FF8800`, `#F80`): yazarken canlı önizleme
 - **Gelişmiş Renk Seçici** (macOS renk tekerleği, kaydırıcılar, damlalık)
-- **Son Kullanılanlar** satırı ve **Gökkuşağı** modu
+- **Son Kullanılanlar** satırı ve soldan sağa akan **Gökkuşağı** modu (hızı ayarlanabilir)
 - **Yoğunluk**: rengin ne kadar güçlü uygulanacağı
 - **Hassasiyet**: yükseldikçe sönük/gri öğeler de boyanır
 - Birden fazla ekran desteği, girişte otomatik başlatma
@@ -64,7 +64,7 @@ Menü çubuğundaki palet simgesine tıkla:
 | Renklendirme Açık | Boyamayı açar/kapatır |
 | Renk Paleti | 84 renkten birine tıkla; menü açık kalır, renkleri hızlıca deneyebilirsin |
 | Son Kullanılanlar | Kod ile girdiğin veya gelişmiş seçiciden aldığın renkler |
-| Gökkuşağı | Menü çubuğu boyunca renk geçişi |
+| Gökkuşağı | Menü çubuğu boyunca soldan sağa akan renk geçişi. Seçiliyken **Akış Hızı** kaydırıcısı çıkar (en sol = sabit). Akarken işlemci kullanımı biraz artar |
 | Renk Kodu Gir… | Hex kod yaz (`#FF8800`, `FF8800`, `#F80`). Yazarken önizlenir, Vazgeç eski renge döner |
 | Gelişmiş Renk Seçici… | macOS renk paneli: tekerlek, RGB/HSB kaydırıcıları, ekrandan renk alma |
 | Yoğunluk | %0 = orijinal beyaz, %100 = tam renk |

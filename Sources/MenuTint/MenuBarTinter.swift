@@ -191,6 +191,7 @@ final class MenuBarTinter {
     func stop() {
         stopped = true
         let stoppingProcessor = processor
+        stoppingProcessor?.stopAnimation()
         for stream in [sceneStream, itemsStream].compactMap({ $0 }) {
             stream.stopCapture { _ in
                 withExtendedLifetime(stoppingProcessor) {}

@@ -24,10 +24,13 @@ import IOSurface
 final class TintRenderer {
     enum Fill {
         case solid(CIColor)
-        case rainbow
+        /// `speed` 0...1: 0 = still, otherwise the rainbow flows left to right.
+        case rainbow(speed: Double)
     }
 
     var fill: Fill
+    /// 0..<1 — how far the flowing rainbow has moved (one full cycle = 1).
+    var rainbowPhase: CGFloat = 0
 
     private let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
     /// Works in (non-linear) sRGB, the space macOS composites the menu bar in,
@@ -91,7 +94,7 @@ final class TintRenderer {
         case .solid(let tint):
             color = CIImage(color: tint).cropped(to: extent)
         case .rainbow:
-            color = Self.rainbow(covering: extent)
+            color = Self.rainbow(covering: extent, phase: rainbowPhase)
         }
 
         // a · (1 − tint)
@@ -156,14 +159,15 @@ final class TintRenderer {
 
     // MARK: - Rainbow
 
-    private static let rainbowWidth = 256
+    /// The strip holds two full hue cycles, so it can be shifted by up to one
+    /// cycle and still cover the whole bar seamlessly.
+    private static let rainbowWidth = 512
 
     private static let rainbowStrip: CIImage = {
         let width = rainbowWidth
         var pixels = [UInt8](repeating: 255, count: width * 4)
         for x in 0..<width {
-            // Stop before the hue wraps back to red.
-            let (r, g, b) = hsvToRGB(h: 0.85 * Double(x) / Double(width - 1), s: 0.75, v: 1)
+            let (r, g, b) = hsvToRGB(h: 2 * (Double(x) + 0.5) / Double(width), s: 0.75, v: 1)
             pixels[x * 4] = UInt8((r * 255).rounded())
             pixels[x * 4 + 1] = UInt8((g * 255).rounded())
             pixels[x * 4 + 2] = UInt8((b * 255).rounded())
@@ -185,10 +189,13 @@ final class TintRenderer {
         return CIImage(cgImage: image)
     }()
 
-    private static func rainbow(covering extent: CGRect) -> CIImage {
-        rainbowStrip
+    /// One hue cycle spans the bar's width; increasing `phase` moves it to the right.
+    private static func rainbow(covering extent: CGRect, phase: CGFloat) -> CIImage {
+        let offset = extent.minX + (phase - 1) * extent.width
+        return rainbowStrip
             .clampedToExtent()
-            .transformed(by: CGAffineTransform(scaleX: extent.width / CGFloat(rainbowWidth), y: extent.height))
+            .transformed(by: CGAffineTransform(scaleX: 2 * extent.width / CGFloat(rainbowWidth), y: extent.height))
+            .transformed(by: CGAffineTransform(translationX: offset, y: 0))
             .cropped(to: extent)
     }
 

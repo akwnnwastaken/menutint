@@ -13,6 +13,7 @@ final class Settings {
         static let sensitivity = "sensitivity"
         static let intensity = "intensity"
         static let recentColors = "recentColors"
+        static let rainbowSpeed = "rainbowSpeed"
     }
 
     var enabled: Bool {
@@ -30,6 +31,12 @@ final class Settings {
     var rainbow: Bool {
         get { defaults.object(forKey: Key.rainbow) as? Bool ?? false }
         set { defaults.set(newValue, forKey: Key.rainbow) }
+    }
+
+    /// 0...1 — how fast the rainbow flows; 0 keeps it still.
+    var rainbowSpeed: Double {
+        get { defaults.object(forKey: Key.rainbowSpeed) as? Double ?? 0.4 }
+        set { defaults.set(newValue, forKey: Key.rainbowSpeed) }
     }
 
     /// 0...1 — higher values also recolour dimmer (grey) items.

@@ -95,6 +95,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         rainbow.image = rainbowSwatch()
         rainbow.state = settings.rainbow ? .on : .off
         menu.addItem(rainbow)
+        if settings.rainbow {
+            menu.addItem(sliderItem(title: "Akış Hızı", value: settings.rainbowSpeed) { [weak self] value in
+                Settings.shared.rainbowSpeed = value
+                self?.controller.applyStyle()
+            })
+        }
 
         let hexItem = actionItem("Renk Kodu Gir…", #selector(enterHexCode))
         if !settings.rainbow {

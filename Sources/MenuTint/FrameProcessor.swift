@@ -26,6 +26,11 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     /// change, and at most one render happens per `minimumDrawInterval`.
     private static let minimumDrawInterval = DispatchTimeInterval.milliseconds(50)
     private var drawScheduled = false
+
+    // Flowing rainbow
+    private static let animationFPS = 30
+    private var animationTimer: DispatchSourceTimer?
+    private var animationPeriod: Double = 0
     private var lastDraw = DispatchTime(uptimeNanoseconds: 0)
     private var lastItems: CIImage?
     /// Raw bytes of the previous frame of each stream, to skip identical frames.
@@ -42,12 +47,21 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
         self.onFrame = onFrame
         self.onStop = onStop
         super.init()
+        queue.async { self.configureAnimation() }
+    }
+
+    func stopAnimation() {
+        queue.async {
+            self.animationTimer?.cancel()
+            self.animationTimer = nil
+        }
     }
 
     func update(maskCube: Data, fill: TintRenderer.Fill) {
         queue.async {
             self.renderer.setMaskCube(maskCube)
             self.renderer.fill = fill
+            self.configureAnimation()
             self.scheduleDraw()
         }
     }
@@ -92,6 +106,30 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     // MARK: Private
+
+    /// Starts, retimes or stops the flowing-rainbow timer to match `renderer.fill`.
+    private func configureAnimation() {
+        guard case .rainbow(let speed) = renderer.fill, speed > 0.001 else {
+            animationTimer?.cancel()
+            animationTimer = nil
+            return
+        }
+        // Seconds per full cycle: 20 s at the slowest, 1.5 s at the fastest.
+        animationPeriod = 20 - (20 - 1.5) * min(speed, 1)
+        guard animationTimer == nil else { return }
+
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        let interval = 1 / Double(Self.animationFPS)
+        timer.schedule(deadline: .now(), repeating: interval, leeway: .milliseconds(5))
+        timer.setEventHandler { [weak self] in
+            guard let self else { return }
+            let phase = self.renderer.rainbowPhase + CGFloat(interval / self.animationPeriod)
+            self.renderer.rainbowPhase = phase.truncatingRemainder(dividingBy: 1)
+            self.draw()
+        }
+        timer.resume()
+        animationTimer = timer
+    }
 
     private func scheduleDraw() {
         guard !drawScheduled else { return }
