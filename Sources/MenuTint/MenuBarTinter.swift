@@ -146,8 +146,9 @@ final class MenuBarTinter {
         config.pixelFormat = kCVPixelFormatType_32BGRA
         config.colorSpaceName = CGColorSpace.sRGB
         config.showsCursor = false
-        config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
-        config.queueDepth = 5
+        // The menu bar rarely changes; 20 fps keeps updates prompt but cheap.
+        config.minimumFrameInterval = CMTime(value: 1, timescale: 20)
+        config.queueDepth = 4
         return config
     }
 

@@ -20,6 +20,12 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     private var lastScene: CIImage?
     /// Pixels from the left edge that hold the app menus (Finder, File, Edit…).
     private var appMenuWidth: CGFloat = 0
+
+    /// Rendering is coalesced: both streams often deliver a frame for the same
+    /// change, and at most one render happens per `minimumDrawInterval`.
+    private static let minimumDrawInterval = DispatchTimeInterval.milliseconds(50)
+    private var drawScheduled = false
+    private var lastDraw = DispatchTime(uptimeNanoseconds: 0)
     private var lastItems: CIImage?
 
     init(
@@ -38,7 +44,7 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
         queue.async {
             self.renderer.setMaskCube(maskCube)
             self.renderer.fill = fill
-            self.draw()
+            self.scheduleDraw()
         }
     }
 
@@ -46,7 +52,7 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
         queue.async {
             guard self.appMenuWidth != appMenuWidth else { return }
             self.appMenuWidth = appMenuWidth
-            self.draw()
+            self.scheduleDraw()
         }
     }
 
@@ -56,6 +62,7 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
         guard type == .screen,
               sampleBuffer.isValid,
               Self.frameStatus(of: sampleBuffer) == .complete,
+              Self.hasChanges(sampleBuffer),
               let pixelBuffer = sampleBuffer.imageBuffer
         else { return }
 
@@ -65,7 +72,7 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
         } else if stream === sceneStream {
             lastScene = frame
         }
-        draw()
+        scheduleDraw()
     }
 
     // MARK: SCStreamDelegate
@@ -77,10 +84,35 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
 
     // MARK: Private
 
+    private func scheduleDraw() {
+        guard !drawScheduled else { return }
+        drawScheduled = true
+        let earliest = lastDraw + Self.minimumDrawInterval
+        let now = DispatchTime.now()
+        queue.asyncAfter(deadline: earliest > now ? earliest : now) {
+            self.drawScheduled = false
+            self.lastDraw = .now()
+            self.draw()
+        }
+    }
+
     private func draw() {
         guard let scene = lastScene, let items = lastItems, scene.extent == items.extent else { return }
         if let image = renderer.render(scene: scene, items: items, appMenuWidth: appMenuWidth) {
             onFrame(image)
+        }
+    }
+
+    /// False when ScreenCaptureKit reports that nothing inside the captured
+    /// area changed (it can deliver frames for changes elsewhere on screen).
+    private static func hasChanges(_ sampleBuffer: CMSampleBuffer) -> Bool {
+        guard let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false)
+                as? [[SCStreamFrameInfo: Any]],
+              let dirtyRects = attachments.first?[.dirtyRects] as? [NSDictionary]
+        else { return true }
+        return dirtyRects.contains { dictionary in
+            guard let rect = CGRect(dictionaryRepresentation: dictionary) else { return true }
+            return !rect.isEmpty
         }
     }
 

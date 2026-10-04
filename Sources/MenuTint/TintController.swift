@@ -138,14 +138,14 @@ final class TintController: NSObject {
     // New status items appear when apps launch; keep the captured window list current.
     private func scheduleWindowRefresh() {
         NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(refreshWindows), object: nil)
-        perform(#selector(refreshWindows), with: nil, afterDelay: 2)
+        perform(#selector(refreshWindows), with: nil, afterDelay: 5)
     }
 
     @objc private func refreshWindows() {
         guard case .running = status else { return }
         let currentGeneration = generation
         Task {
-            let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+            let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
             guard currentGeneration == generation else { return }
             if let content {
                 let overlayIDs = self.overlayIDs
