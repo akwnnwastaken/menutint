@@ -62,9 +62,10 @@ final class Settings {
         NSColor(hex: colorHex) ?? .systemTeal
     }
 
-    /// Brightness (0...1) above which a pixel counts as a "white" menu bar item.
-    var threshold: Double {
-        0.95 - 0.55 * sensitivity
+    /// Whiteness (0...1) below which nothing is recoloured. Higher sensitivity
+    /// lowers it so dim grey items are recoloured too.
+    var whitenessFloor: Double {
+        0.35 * (1 - sensitivity)
     }
 }
 

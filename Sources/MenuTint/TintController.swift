@@ -85,38 +85,54 @@ final class TintController: NSObject {
     }
 
     private func startCapture(for tinters: [MenuBarTinter], generation currentGeneration: Int) async {
-        let content: SCShareableContent
-        do {
-            content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
-        } catch {
-            guard currentGeneration == generation else { return }
-            status = .failed(error.localizedDescription)
-            return
-        }
-        guard currentGeneration == generation else { return }
-
         let overlayIDs = self.overlayIDs
-        var started = 0
-        for tinter in tinters {
-            guard let display = content.displays.first(where: { $0.displayID == tinter.displayID }) else { continue }
+
+        // The freshly ordered-in overlay windows can take a moment to show up in
+        // the shareable content, and capturing without excluding them would
+        // feed the overlay back into itself.
+        for _ in 0..<10 {
+            let content: SCShareableContent
             do {
-                try await tinter.start(
-                    display: display,
-                    content: content,
-                    overlayIDs: overlayIDs,
-                    maskCube: Self.currentMaskCube(),
-                    fill: Self.currentFill()
-                )
-                started += 1
+                content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
             } catch {
-                NSLog("MenuTint: could not start capture: \(error.localizedDescription)")
+                guard currentGeneration == generation else { return }
+                status = .failed(error.localizedDescription)
+                return
             }
             guard currentGeneration == generation else { return }
+
+            let overlays = content.windows.filter { overlayIDs.contains($0.windowID) }
+            guard overlays.count == overlayIDs.count else {
+                try? await Task.sleep(nanoseconds: 150_000_000)
+                continue
+            }
+
+            var started = 0
+            for tinter in tinters {
+                guard let display = content.displays.first(where: { $0.displayID == tinter.displayID }) else { continue }
+                do {
+                    try await tinter.start(
+                        display: display,
+                        content: content,
+                        overlays: overlays,
+                        maskCube: Self.currentMaskCube(),
+                        fill: Self.currentFill()
+                    )
+                    started += 1
+                } catch {
+                    NSLog("MenuTint: could not start capture: \(error.localizedDescription)")
+                }
+                guard currentGeneration == generation else { return }
+            }
+            status = started > 0 ? .running(screens: started) : .failed("Ekran yakalama başlatılamadı")
+            if started > 0 {
+                scheduleWindowRefresh()
+            }
+            return
         }
-        status = started > 0 ? .running(screens: started) : .failed("Ekran yakalama başlatılamadı")
-        if started > 0 {
-            scheduleWindowRefresh()
-        }
+
+        guard currentGeneration == generation else { return }
+        status = .failed("Kaplama pencereleri bulunamadı")
     }
 
     // New status items appear when apps launch; keep the captured window list current.
@@ -129,7 +145,7 @@ final class TintController: NSObject {
         guard case .running = status else { return }
         let currentGeneration = generation
         Task {
-            let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
+            let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
             guard currentGeneration == generation else { return }
             if let content {
                 let overlayIDs = self.overlayIDs
@@ -140,7 +156,7 @@ final class TintController: NSObject {
     }
 
     private static func currentMaskCube() -> Data {
-        MaskLUT.make(threshold: Settings.shared.threshold, intensity: Settings.shared.intensity)
+        MaskLUT.make(floor: Settings.shared.whitenessFloor, intensity: Settings.shared.intensity)
     }
 
     private static func currentFill() -> TintRenderer.Fill {

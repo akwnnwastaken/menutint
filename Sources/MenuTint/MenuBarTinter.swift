@@ -24,7 +24,10 @@ final class MenuBarTinter {
     /// Menu bar area in display-local points (top-left origin), as ScreenCaptureKit expects.
     private let captureRect: CGRect
     private let scale: CGFloat
-    private var stream: SCStream?
+    /// The menu bar as it looks on screen (minus MenuTint's own overlays).
+    private var sceneStream: SCStream?
+    /// Only the menu bar's own windows, over black.
+    private var itemsStream: SCStream?
     private var processor: FrameProcessor?
     private var stopped = false
     private var display: SCDisplay?
@@ -71,25 +74,14 @@ final class MenuBarTinter {
         self.hostLayer = layer
     }
 
-    /// Starts capturing the menu bar windows (status items, app menus) of `display`.
-    /// The wallpaper and other apps are never captured, so they can't be tinted.
-    func start(display: SCDisplay, content: SCShareableContent, overlayIDs: Set<CGWindowID>, maskCube: Data, fill: TintRenderer.Fill) async throws {
+    /// Starts both captures of this display's menu bar strip.
+    func start(display: SCDisplay, content: SCShareableContent, overlays: [SCWindow], maskCube: Data, fill: TintRenderer.Fill) async throws {
         guard !stopped else { return }
 
-        let windows = menuBarWindows(in: content, display: display, overlayIDs: overlayIDs)
-        currentWindowIDs = Set(windows.map(\.windowID))
+        let overlayIDs = Set(overlays.map(\.windowID))
+        let items = menuBarWindows(in: content, display: display, overlayIDs: overlayIDs)
+        currentWindowIDs = Set(items.map(\.windowID))
         self.display = display
-
-        let config = SCStreamConfiguration()
-        config.sourceRect = captureRect
-        config.width = Int((captureRect.width * scale).rounded())
-        config.height = Int((captureRect.height * scale).rounded())
-        config.pixelFormat = kCVPixelFormatType_32BGRA
-        config.colorSpaceName = CGColorSpace.sRGB
-        config.backgroundColor = CGColor(gray: 0, alpha: 1)
-        config.showsCursor = false
-        config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
-        config.queueDepth = 5
 
         let processor = FrameProcessor(
             maskCube: maskCube,
@@ -101,30 +93,60 @@ final class MenuBarTinter {
                 DispatchQueue.main.async { self?.onStreamStopped?() }
             }
         )
-        let filter = SCContentFilter(display: display, including: windows)
-        let stream = SCStream(filter: filter, configuration: config, delegate: processor)
-        try stream.addStreamOutput(processor, type: .screen, sampleHandlerQueue: processor.queue)
-        self.stream = stream
+        // Never capture the overlays themselves, or they would feed back into the result.
+        let sceneStream = SCStream(
+            filter: SCContentFilter(display: display, excludingWindows: overlays),
+            configuration: makeConfiguration(),
+            delegate: processor
+        )
+        let itemsConfig = makeConfiguration()
+        itemsConfig.backgroundColor = CGColor(gray: 0, alpha: 1)
+        let itemsStream = SCStream(
+            filter: SCContentFilter(display: display, including: items),
+            configuration: itemsConfig,
+            delegate: processor
+        )
+        try sceneStream.addStreamOutput(processor, type: .screen, sampleHandlerQueue: processor.queue)
+        try itemsStream.addStreamOutput(processor, type: .screen, sampleHandlerQueue: processor.queue)
+        processor.sceneStream = sceneStream
+        processor.itemsStream = itemsStream
+        self.sceneStream = sceneStream
+        self.itemsStream = itemsStream
         self.processor = processor
 
-        try await stream.startCapture()
+        try await itemsStream.startCapture()
+        try await sceneStream.startCapture()
         if stopped {
-            try? await stream.stopCapture()
+            try? await itemsStream.stopCapture()
+            try? await sceneStream.stopCapture()
         }
     }
 
     /// Picks up status items that appeared or disappeared since the last call.
     func refreshWindows(content: SCShareableContent, overlayIDs: Set<CGWindowID>) {
-        guard !stopped, let stream, let display else { return }
+        guard !stopped, let itemsStream, let display else { return }
         let windows = menuBarWindows(in: content, display: display, overlayIDs: overlayIDs)
         let ids = Set(windows.map(\.windowID))
         guard ids != currentWindowIDs else { return }
         currentWindowIDs = ids
-        stream.updateContentFilter(SCContentFilter(display: display, including: windows)) { error in
+        itemsStream.updateContentFilter(SCContentFilter(display: display, including: windows)) { error in
             if let error {
                 NSLog("MenuTint: could not update capture filter: \(error.localizedDescription)")
             }
         }
+    }
+
+    private func makeConfiguration() -> SCStreamConfiguration {
+        let config = SCStreamConfiguration()
+        config.sourceRect = captureRect
+        config.width = Int((captureRect.width * scale).rounded())
+        config.height = Int((captureRect.height * scale).rounded())
+        config.pixelFormat = kCVPixelFormatType_32BGRA
+        config.colorSpaceName = CGColorSpace.sRGB
+        config.showsCursor = false
+        config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
+        config.queueDepth = 5
+        return config
     }
 
     /// Windows that live entirely inside this display's menu bar strip:
@@ -139,6 +161,7 @@ final class MenuBarTinter {
         ).insetBy(dx: 0, dy: -2)
         return content.windows.filter { window in
             !overlayIDs.contains(window.windowID)
+                && window.isOnScreen
                 && (20..<100).contains(window.windowLayer)
                 && window.frame.width > 0
                 && window.frame.height > 0
@@ -152,13 +175,14 @@ final class MenuBarTinter {
 
     func stop() {
         stopped = true
-        if let stream {
-            let processor = self.processor
+        let processor = self.processor
+        for stream in [sceneStream, itemsStream].compactMap({ $0 }) {
             stream.stopCapture { _ in
                 withExtendedLifetime(processor) {}
             }
         }
-        stream = nil
+        sceneStream = nil
+        itemsStream = nil
         processor = nil
         window.orderOut(nil)
     }

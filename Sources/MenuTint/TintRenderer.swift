@@ -1,9 +1,17 @@
 import CoreImage
 import Foundation
 
-/// Turns a captured menu bar frame into an overlay image that contains only the
-/// recoloured items (everything else is transparent).
-/// The input is expected to contain only the menu bar's own windows over black.
+/// Rebuilds the menu bar with its white items recoloured.
+///
+/// Two captures of the same strip are used:
+/// - `scene`: the menu bar exactly as it looks on screen,
+/// - `items`: only the menu bar's own windows, over black.
+///
+/// A white item drawn with coverage `a` over background `bg` looks like
+/// `bg·(1−a) + a`. Subtracting `a·(1 − tint)` gives `bg·(1−a) + a·tint`: the same
+/// item in the tint colour, with its anti-aliased edges blended into the real
+/// background. The result is opaque around the items so the white originals
+/// underneath are fully covered; everywhere else it is transparent.
 ///
 /// Not thread-safe: use it from a single queue.
 final class TintRenderer {
@@ -14,8 +22,13 @@ final class TintRenderer {
 
     var fill: Fill
 
-    private let context = CIContext(options: [.cacheIntermediates: false])
     private let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
+    /// Works in (non-linear) sRGB, the space macOS composites the menu bar in,
+    /// so the subtraction above undoes the original blending exactly.
+    private lazy var context = CIContext(options: [
+        .workingColorSpace: sRGB,
+        .cacheIntermediates: false,
+    ])
     private let maskFilter = CIFilter(name: "CIColorCubeWithColorSpace")!
 
     init(maskCube: Data, fill: Fill) {
@@ -29,12 +42,12 @@ final class TintRenderer {
         maskFilter.setValue(data, forKey: "inputCubeData")
     }
 
-    func render(_ input: CIImage) -> CGImage? {
-        let extent = input.extent
+    func render(scene: CIImage, items: CIImage) -> CGImage? {
+        let extent = scene.extent
 
-        // Greyscale coverage map: how much of each pixel becomes the tint colour.
-        maskFilter.setValue(input, forKey: kCIInputImageKey)
-        guard let mask = maskFilter.outputImage else { return nil }
+        // a: how white each pixel of the items is (0 = not part of a white item).
+        maskFilter.setValue(items, forKey: kCIInputImageKey)
+        guard let whiteness = maskFilter.outputImage?.cropped(to: extent) else { return nil }
 
         let color: CIImage
         switch fill {
@@ -44,10 +57,30 @@ final class TintRenderer {
             color = Self.rainbow(covering: extent)
         }
 
-        // Paint the items in exactly the chosen colour; everything else stays transparent.
-        let output = color.applyingFilter("CIBlendWithMask", parameters: [
+        // a · (1 − tint)
+        let delta = color
+            .applyingFilter("CIColorInvert")
+            .applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: whiteness])
+        // scene − a · (1 − tint)
+        let recoloured = delta
+            .applyingFilter("CISubtractBlendMode", parameters: [kCIInputBackgroundImageKey: scene])
+            .cropped(to: extent)
+
+        // Cover the items (plus a 2 px margin) completely; leave the rest of the bar live.
+        let coverMask = whiteness
+            .applyingFilter("CIMorphologyMaximum", parameters: [kCIInputRadiusKey: 2])
+            .applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": CIVector(x: 12, y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 0, y: 12, z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: 12, w: 0),
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+            ])
+            .applyingFilter("CIColorClamp")
+            .cropped(to: extent)
+
+        let output = recoloured.applyingFilter("CIBlendWithMask", parameters: [
             kCIInputBackgroundImageKey: CIImage(color: .clear).cropped(to: extent),
-            kCIInputMaskImageKey: mask,
+            kCIInputMaskImageKey: coverMask,
         ])
         return context.createCGImage(output, from: extent, format: .RGBA8, colorSpace: sRGB)
     }

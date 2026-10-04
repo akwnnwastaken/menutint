@@ -1,20 +1,20 @@
 import Foundation
 
-/// Builds the 3D lookup table (for `CIColorCubeWithColorSpace`) that turns a
-/// captured menu bar pixel into the coverage of the tint colour.
+/// Builds the 3D lookup table (for `CIColorCubeWithColorSpace`) that turns a pixel
+/// of the menu-bar-windows-only capture (items over black) into the item's
+/// "whiteness" `a` — for an item of grey level g drawn with coverage c, `a ≈ g·c`.
 ///
-/// Only the menu bar's own windows are captured, over a black background, so a
-/// white item's anti-aliased pixel is roughly `white * coverage`. The smallest
-/// channel is used as the "whiteness": white/grey items have all channels high,
-/// coloured icons (battery green, orange dots…) have at least one low channel
-/// and are left alone.
+/// The smallest channel is used, so coloured icons (battery green, orange dots…)
+/// produce little or no `a` and stay as they are.
 enum MaskLUT {
     static let dimension = 32
 
-    static func make(threshold: Double, intensity: Double) -> Data {
+    /// - Parameters:
+    ///   - floor: whiteness below this is ignored (e.g. a faint menu bar backdrop).
+    ///   - intensity: 0...1, scales the result.
+    static func make(floor: Double, intensity: Double) -> Data {
         let n = dimension
-        let upper = Float(threshold)
-        let lower = upper * 0.15
+        let floor = Float(min(max(floor, 0), 0.9))
         let strength = Float(min(max(intensity, 0), 1))
         let step = 1 / Float(n - 1)
 
@@ -25,13 +25,7 @@ enum MaskLUT {
             for g in 0..<n {
                 for r in 0..<n {
                     let whiteness = min(Float(r), Float(g), Float(b)) * step
-                    let coverage = smoothstep(lower, upper, whiteness)
-                    // Lean towards full coverage so edges don't keep a white fringe.
-                    let boosted = 1 - (1 - coverage) * (1 - coverage)
-                    let weight = boosted * strength
-                    // The cube's output is converted from sRGB back to Core Image's
-                    // linear working space, so pre-encode the weight to keep it linear.
-                    let value = linearToSRGB(weight)
+                    let value = max(0, (whiteness - floor) / (1 - floor)) * strength
                     cube[i] = value
                     cube[i + 1] = value
                     cube[i + 2] = value
@@ -41,15 +35,5 @@ enum MaskLUT {
             }
         }
         return cube.withUnsafeBufferPointer { Data(buffer: $0) }
-    }
-
-    private static func smoothstep(_ edge0: Float, _ edge1: Float, _ x: Float) -> Float {
-        guard edge1 > edge0 else { return x >= edge1 ? 1 : 0 }
-        let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
-        return t * t * (3 - 2 * t)
-    }
-
-    private static func linearToSRGB(_ value: Float) -> Float {
-        value <= 0.0031308 ? value * 12.92 : 1.055 * pow(value, 1 / 2.4) - 0.055
     }
 }

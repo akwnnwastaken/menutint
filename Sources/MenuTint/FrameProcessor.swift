@@ -2,8 +2,8 @@ import CoreImage
 import CoreMedia
 import ScreenCaptureKit
 
-/// Receives menu bar frames from ScreenCaptureKit and renders the tinted overlay
-/// on its own queue.
+/// Receives the two menu bar captures (scene + items-only) from ScreenCaptureKit
+/// and renders the tinted overlay on its own queue.
 final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     let queue = DispatchQueue(label: "MenuTint.frames", qos: .userInteractive)
 
@@ -11,9 +11,14 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     private let onFrame: @Sendable (CGImage) -> Void
     private let onStop: @Sendable (Error) -> Void
 
-    /// Last captured frame, so style changes show up even while the menu bar is static
-    /// (ScreenCaptureKit only delivers frames when something changes).
-    private var lastFrame: CIImage?
+    /// Set before capture starts; used to tell the two streams apart.
+    weak var sceneStream: SCStream?
+    weak var itemsStream: SCStream?
+
+    /// Latest frames, kept so style changes show up even while the menu bar is
+    /// static (ScreenCaptureKit only delivers frames when something changes).
+    private var lastScene: CIImage?
+    private var lastItems: CIImage?
 
     init(
         maskCube: Data,
@@ -31,9 +36,7 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
         queue.async {
             self.renderer.setMaskCube(maskCube)
             self.renderer.fill = fill
-            if let frame = self.lastFrame {
-                self.draw(frame)
-            }
+            self.draw()
         }
     }
 
@@ -47,8 +50,12 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
         else { return }
 
         let frame = CIImage(cvPixelBuffer: pixelBuffer)
-        lastFrame = frame
-        draw(frame)
+        if stream === itemsStream {
+            lastItems = frame
+        } else if stream === sceneStream {
+            lastScene = frame
+        }
+        draw()
     }
 
     // MARK: SCStreamDelegate
@@ -60,8 +67,9 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
 
     // MARK: Private
 
-    private func draw(_ frame: CIImage) {
-        if let image = renderer.render(frame) {
+    private func draw() {
+        guard let scene = lastScene, let items = lastItems, scene.extent == items.extent else { return }
+        if let image = renderer.render(scene: scene, items: items) {
             onFrame(image)
         }
     }
