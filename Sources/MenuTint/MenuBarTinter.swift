@@ -113,6 +113,7 @@ final class MenuBarTinter {
         self.sceneStream = sceneStream
         self.itemsStream = itemsStream
         self.processor = processor
+        processor.update(appMenuWidth: appMenuWidth(content: content, display: display, overlayIDs: overlayIDs))
 
         try await itemsStream.startCapture()
         try await sceneStream.startCapture()
@@ -125,6 +126,7 @@ final class MenuBarTinter {
     /// Picks up status items that appeared or disappeared since the last call.
     func refreshWindows(content: SCShareableContent, overlayIDs: Set<CGWindowID>) {
         guard !stopped, let itemsStream, let display else { return }
+        processor?.update(appMenuWidth: appMenuWidth(content: content, display: display, overlayIDs: overlayIDs))
         let windows = menuBarWindows(in: content, display: display, overlayIDs: overlayIDs)
         let ids = Set(windows.map(\.windowID))
         guard ids != currentWindowIDs else { return }
@@ -147,6 +149,17 @@ final class MenuBarTinter {
         config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
         config.queueDepth = 5
         return config
+    }
+
+    /// Width in pixels of the app menu area: from the left edge up to the first
+    /// status item (MenuTint's own status item always exists, so there is one).
+    private func appMenuWidth(content: SCShareableContent, display: SCDisplay, overlayIDs: Set<CGWindowID>) -> CGFloat {
+        let statusLevel = Int(CGWindowLevelForKey(.statusWindow))
+        let firstStatusItemX = menuBarWindows(in: content, display: display, overlayIDs: overlayIDs)
+            .filter { $0.windowLayer == statusLevel && $0.frame.width < display.frame.width / 2 }
+            .map { $0.frame.minX - display.frame.minX }
+            .min() ?? captureRect.width / 2
+        return max(0, firstStatusItemX - 6) * scale
     }
 
     /// Windows that live entirely inside this display's menu bar strip:

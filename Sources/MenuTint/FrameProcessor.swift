@@ -18,6 +18,8 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     /// Latest frames, kept so style changes show up even while the menu bar is
     /// static (ScreenCaptureKit only delivers frames when something changes).
     private var lastScene: CIImage?
+    /// Pixels from the left edge that hold the app menus (Finder, File, Edit…).
+    private var appMenuWidth: CGFloat = 0
     private var lastItems: CIImage?
 
     init(
@@ -36,6 +38,14 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
         queue.async {
             self.renderer.setMaskCube(maskCube)
             self.renderer.fill = fill
+            self.draw()
+        }
+    }
+
+    func update(appMenuWidth: CGFloat) {
+        queue.async {
+            guard self.appMenuWidth != appMenuWidth else { return }
+            self.appMenuWidth = appMenuWidth
             self.draw()
         }
     }
@@ -69,7 +79,7 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
 
     private func draw() {
         guard let scene = lastScene, let items = lastItems, scene.extent == items.extent else { return }
-        if let image = renderer.render(scene: scene, items: items) {
+        if let image = renderer.render(scene: scene, items: items, appMenuWidth: appMenuWidth) {
             onFrame(image)
         }
     }

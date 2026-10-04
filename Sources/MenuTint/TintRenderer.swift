@@ -7,6 +7,11 @@ import Foundation
 /// - `scene`: the menu bar exactly as it looks on screen,
 /// - `items`: only the menu bar's own windows, over black.
 ///
+/// App menu titles (Finder, File, Edit…) don't show up in `items` (they are drawn
+/// with vibrancy), so for the area left of the status items the whiteness is
+/// taken from `scene` instead. The menu bar background is dark there and
+/// coloured pixels are ignored, so only the light text is picked up.
+///
 /// A white item drawn with coverage `a` over background `bg` looks like
 /// `bg·(1−a) + a`. Subtracting `a·(1 − tint)` gives `bg·(1−a) + a·tint`: the same
 /// item in the tint colour, with its anti-aliased edges blended into the real
@@ -42,12 +47,36 @@ final class TintRenderer {
         maskFilter.setValue(data, forKey: "inputCubeData")
     }
 
-    func render(scene: CIImage, items: CIImage) -> CGImage? {
+    /// - Parameter appMenuWidth: width in pixels, from the left edge, of the area
+    ///   holding the app menus.
+    func render(scene: CIImage, items: CIImage, appMenuWidth: CGFloat) -> CGImage? {
         let extent = scene.extent
 
         // a: how white each pixel of the items is (0 = not part of a white item).
         maskFilter.setValue(items, forKey: kCIInputImageKey)
-        guard let whiteness = maskFilter.outputImage?.cropped(to: extent) else { return nil }
+        guard var whiteness = maskFilter.outputImage?.cropped(to: extent) else { return nil }
+
+        if appMenuWidth > 0 {
+            maskFilter.setValue(scene, forKey: kCIInputImageKey)
+            if let sceneWhiteness = maskFilter.outputImage {
+                // The real background still adds some whiteness here; drop the
+                // weakest part so the bar itself isn't recoloured.
+                let menuRect = CGRect(x: extent.minX, y: extent.minY, width: min(appMenuWidth, extent.width), height: extent.height)
+                let menuWhiteness = sceneWhiteness
+                    .applyingFilter("CIColorMatrix", parameters: [
+                        "inputRVector": CIVector(x: 1.25, y: 0, z: 0, w: 0),
+                        "inputGVector": CIVector(x: 0, y: 1.25, z: 0, w: 0),
+                        "inputBVector": CIVector(x: 0, y: 0, z: 1.25, w: 0),
+                        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+                        "inputBiasVector": CIVector(x: -0.25, y: -0.25, z: -0.25, w: 0),
+                    ])
+                    .applyingFilter("CIColorClamp")
+                    .cropped(to: menuRect)
+                whiteness = menuWhiteness
+                    .applyingFilter("CIMaximumCompositing", parameters: [kCIInputBackgroundImageKey: whiteness])
+                    .cropped(to: extent)
+            }
+        }
 
         let color: CIImage
         switch fill {
