@@ -29,7 +29,7 @@ Arka plan, duvar kağıdı ve zaten renkli olan simgeler (ör. yeşil pil) oldu�
 ## Kurulum
 
 ```bash
-git clone -b claude/amazing-cerf-rwjwoj https://github.com/akwnnwastaken/menutint.git
+git clone https://github.com/akwnnwastaken/menutint.git
 cd menutint
 ./scripts/create-signing-cert.sh   # bir kez: izin her derlemede sıfırlanmasın
 ./scripts/build-app.sh          # Apple Silicon + Intel (tam Xcode gerekir)
@@ -38,10 +38,19 @@ mv build/MenuTint.app /Applications/
 open /Applications/MenuTint.app
 ```
 
-Hazır derlenmiş sürüm: GitHub'daki **Actions → Build** çalışmasının sonundaki `MenuTint` dosyasını indir. Uygulama imzasız olduğu için ilk açılışta Gatekeeper uyarı verir. Bu durumda uygulamaya sağ tıklayıp **Aç**'ı seç ya da şunu çalıştır:
+Hazır derlenmiş sürüm: [Releases](https://github.com/akwnnwastaken/menutint/releases/latest) sayfasından `MenuTint.zip` dosyasını indir, açıp `MenuTint.app`'i Uygulamalar klasörüne taşı. Uygulama imzasız olduğu için ilk açılışta Gatekeeper uyarı verir. Bu durumda uygulamaya sağ tıklayıp **Aç**'ı seç ya da şunu çalıştır:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/MenuTint.app
+```
+
+### Güncelleme
+
+```bash
+cd menutint && git pull && ./scripts/build-app.sh
+pkill -x MenuTint; sleep 1
+rm -rf /Applications/MenuTint.app && mv build/MenuTint.app /Applications/
+open /Applications/MenuTint.app
 ```
 
 ### Ekran Kaydı izni
