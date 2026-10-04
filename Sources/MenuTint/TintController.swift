@@ -161,7 +161,11 @@ final class TintController: NSObject {
 
     private static func currentFill() -> TintRenderer.Fill {
         if Settings.shared.rainbow {
-            return .rainbow(speed: Settings.shared.rainbowSpeed)
+            return .rainbow(
+                style: Settings.shared.rainbowStyle,
+                speed: Settings.shared.rainbowSpeed,
+                reversed: Settings.shared.rainbowReversed
+            )
         }
         let color = Settings.shared.color.usingColorSpace(.sRGB) ?? .white
         return .solid(color.cgColor)

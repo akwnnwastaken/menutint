@@ -31,8 +31,9 @@ import IOSurface
 final class TintRenderer {
     enum Fill {
         case solid(CGColor)
-        /// `speed` 0...1: 0 = still, otherwise the rainbow flows left to right.
-        case rainbow(speed: Double)
+        /// `speed` 0...1: 0 = still, otherwise the rainbow flows left to right
+        /// (right to left when `reversed`).
+        case rainbow(style: RainbowStyle, speed: Double, reversed: Bool)
     }
 
     struct Output {

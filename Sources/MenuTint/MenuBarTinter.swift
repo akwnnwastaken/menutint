@@ -29,6 +29,9 @@ final class MenuBarTinter {
     private let colorMask: CALayer
     /// Two seamless hue cycles, twice the bar's width (rainbow mode).
     private let rainbowLayer: CAGradientLayer
+    private var rainbowStyle: RainbowStyle = .classic
+    /// Identifies the running flow animation ("period-reversed"), nil when still.
+    private var flowSignature: String?
     /// Menu bar area in display-local points (top-left origin), as ScreenCaptureKit expects.
     private let captureRect: CGRect
     private let scale: CGFloat
@@ -94,7 +97,7 @@ final class MenuBarTinter {
         rainbow.frame = CGRect(x: -bounds.width, y: 0, width: bounds.width * 2, height: bounds.height)
         rainbow.startPoint = CGPoint(x: 0, y: 0.5)
         rainbow.endPoint = CGPoint(x: 1, y: 0.5)
-        rainbow.colors = Self.rainbowColors()
+        rainbow.colors = RainbowStyle.classic.gradientColors
         rainbow.isHidden = true
         color.addSublayer(rainbow)
 
@@ -234,60 +237,45 @@ final class MenuBarTinter {
         switch fill {
         case .solid(let color):
             rainbowLayer.removeAllAnimations()
+            flowSignature = nil
             rainbowLayer.isHidden = true
             colorLayer.backgroundColor = color
-        case .rainbow(let speed):
+        case .rainbow(let style, let speed, let reversed):
             colorLayer.backgroundColor = nil
             rainbowLayer.isHidden = false
-            let width = colorLayer.bounds.width
-            if speed > 0.001 {
-                // Seconds per full cycle: 20 s at the slowest, 1.5 s at the fastest.
-                let period = 20 - (20 - 1.5) * min(speed, 1)
-                let existing = rainbowLayer.animation(forKey: "flow") as? CABasicAnimation
-                if existing.map({ abs($0.duration - period) > 0.01 }) ?? true {
-                    let flow = CABasicAnimation(keyPath: "transform.translation.x")
-                    flow.fromValue = 0
-                    flow.toValue = width
-                    flow.duration = period
-                    flow.repeatCount = .infinity
-                    flow.isRemovedOnCompletion = false
-                    // Keep the rainbow where it is when only the speed changes.
-                    if existing != nil, width > 0,
-                       let x = rainbowLayer.presentation()?.value(forKeyPath: "transform.translation.x") as? CGFloat {
-                        flow.timeOffset = period * Double(x / width)
-                    }
-                    rainbowLayer.add(flow, forKey: "flow")
-                }
-            } else {
-                rainbowLayer.removeAllAnimations()
+            if rainbowStyle != style {
+                rainbowLayer.colors = style.gradientColors
+                rainbowStyle = style
             }
+            let width = colorLayer.bounds.width
+            guard speed > 0.001, width > 0 else {
+                rainbowLayer.removeAllAnimations()
+                flowSignature = nil
+                break
+            }
+            // Seconds per full cycle: 20 s at the slowest, 1.5 s at the fastest.
+            let period = 20 - (20 - 1.5) * min(speed, 1)
+            let signature = "\(period)-\(reversed)"
+            guard signature != flowSignature else { break }
+
+            // Continue from where the rainbow currently is, so changing speed or
+            // direction doesn't make it jump.
+            var position: CGFloat = 0
+            if flowSignature != nil,
+               let x = rainbowLayer.presentation()?.value(forKeyPath: "transform.translation.x") as? CGFloat {
+                position = min(max(x / width, 0), 1)
+            }
+            let flow = CABasicAnimation(keyPath: "transform.translation.x")
+            flow.fromValue = reversed ? width : 0
+            flow.toValue = reversed ? 0 : width
+            flow.duration = period
+            flow.repeatCount = .infinity
+            flow.isRemovedOnCompletion = false
+            flow.timeOffset = period * Double(reversed ? 1 - position : position)
+            rainbowLayer.add(flow, forKey: "flow")
+            flowSignature = signature
         }
         CATransaction.commit()
-    }
-
-    private static func rainbowColors() -> [CGColor] {
-        let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
-        let stepsPerCycle = 12
-        return (0...(stepsPerCycle * 2)).map { step in
-            let hue = CGFloat(step % stepsPerCycle) / CGFloat(stepsPerCycle)
-            let color = NSColor(hue: hue, saturation: 0.75, brightness: 1, alpha: 1)
-            let rgb = color.usingColorSpace(.sRGB) ?? color
-            return CGColor(colorSpace: sRGB, components: [rgb.redComponent, rgb.greenComponent, rgb.blueComponent, 1])!
-        }
-    }
-
-    func stop() {
-        stopped = true
-        let stoppingProcessor = processor
-        for stream in [sceneStream, itemsStream].compactMap({ $0 }) {
-            stream.stopCapture { _ in
-                withExtendedLifetime(stoppingProcessor) {}
-            }
-        }
-        sceneStream = nil
-        itemsStream = nil
-        processor = nil
-        window.orderOut(nil)
     }
 
     private func present(_ output: TintRenderer.Output) {

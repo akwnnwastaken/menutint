@@ -5,7 +5,7 @@ macOS menü çubuğundaki **beyaz** simgeleri ve yazıları (saat, Wi‑Fi, pil,
 - Menü içinde **84 renklik palet** (tıkladığın an uygulanır, menü açık kalır)
 - **Renk kodu girme** (`#FF8800`, `FF8800`, `#F80`): yazarken canlı önizleme
 - **Gelişmiş Renk Seçici** (macOS renk tekerleği, kaydırıcılar, damlalık)
-- **Son Kullanılanlar** satırı ve soldan sağa akan **Gökkuşağı** modu (hızı ayarlanabilir)
+- **Son Kullanılanlar** satırı ve akan **Gökkuşağı** modu: 10 stil (Klasik, Pastel, Derin, Neon, Gün Batımı, Okyanus, Orman, Ateş, Kutup Işıkları, Şeker), hız ve yön ayarı
 - **Yoğunluk**: rengin ne kadar güçlü uygulanacağı
 - **Hassasiyet**: yükseldikçe sönük/gri öğeler de boyanır
 - Birden fazla ekran desteği, girişte otomatik başlatma
@@ -64,7 +64,7 @@ Menü çubuğundaki palet simgesine tıkla:
 | Renklendirme Açık | Boyamayı açar/kapatır |
 | Renk Paleti | 84 renkten birine tıkla; menü açık kalır, renkleri hızlıca deneyebilirsin |
 | Son Kullanılanlar | Kod ile girdiğin veya gelişmiş seçiciden aldığın renkler |
-| Gökkuşağı | Menü çubuğu boyunca soldan sağa akan renk geçişi. Seçiliyken **Akış Hızı** kaydırıcısı çıkar (en sol = sabit). Animasyonu macOS'un pencere sunucusu çalıştırır, MenuTint'e ek yük getirmez |
+| Gökkuşağı | Menü çubuğu boyunca soldan sağa akan renk geçişi. Seçiliyken **Gökkuşağı Stili** alt menüsü, **Akış Hızı** kaydırıcısı (en sol = sabit) ve **Ters Yön** seçeneği çıkar. Animasyonu macOS'un pencere sunucusu çalıştırır, MenuTint'e ek yük getirmez |
 | Renk Kodu Gir… | Hex kod yaz (`#FF8800`, `FF8800`, `#F80`). Yazarken önizlenir, Vazgeç eski renge döner |
 | Gelişmiş Renk Seçici… | macOS renk paneli: tekerlek, RGB/HSB kaydırıcıları, ekrandan renk alma |
 | Yoğunluk | %0 = orijinal beyaz, %100 = tam renk |
@@ -93,4 +93,5 @@ Sources/MenuTint/
   SliderMenuView.swift   menü içi kaydırıcı
   ColorGridView.swift    menü içi renk paleti
   HexEntry.swift         renk kodu giriş penceresi
+  RainbowStyle.swift     gökkuşağı stilleri
 ```

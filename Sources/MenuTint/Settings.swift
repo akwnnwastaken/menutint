@@ -14,6 +14,8 @@ final class Settings {
         static let intensity = "intensity"
         static let recentColors = "recentColors"
         static let rainbowSpeed = "rainbowSpeed"
+        static let rainbowStyle = "rainbowStyle"
+        static let rainbowReversed = "rainbowReversed"
     }
 
     var enabled: Bool {
@@ -37,6 +39,17 @@ final class Settings {
     var rainbowSpeed: Double {
         get { defaults.object(forKey: Key.rainbowSpeed) as? Double ?? 0.4 }
         set { defaults.set(newValue, forKey: Key.rainbowSpeed) }
+    }
+
+    var rainbowStyle: RainbowStyle {
+        get { defaults.string(forKey: Key.rainbowStyle).flatMap(RainbowStyle.init(rawValue:)) ?? .classic }
+        set { defaults.set(newValue.rawValue, forKey: Key.rainbowStyle) }
+    }
+
+    /// Flow right to left instead of left to right.
+    var rainbowReversed: Bool {
+        get { defaults.object(forKey: Key.rainbowReversed) as? Bool ?? false }
+        set { defaults.set(newValue, forKey: Key.rainbowReversed) }
     }
 
     /// 0...1 — higher values also recolour dimmer (grey) items.

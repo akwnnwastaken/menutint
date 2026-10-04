@@ -92,14 +92,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         let rainbow = actionItem("Gökkuşağı", #selector(selectRainbow))
-        rainbow.image = rainbowSwatch()
+        rainbow.image = gradientSwatch(settings.rainbowStyle, width: 14)
         rainbow.state = settings.rainbow ? .on : .off
         menu.addItem(rainbow)
         if settings.rainbow {
+            let styleItem = NSMenuItem(title: "Gökkuşağı Stili: \(settings.rainbowStyle.title)", action: nil, keyEquivalent: "")
+            let styles = NSMenu()
+            for style in RainbowStyle.allCases {
+                let item = actionItem(style.title, #selector(selectRainbowStyle(_:)))
+                item.representedObject = style.rawValue
+                item.image = gradientSwatch(style, width: 28)
+                item.state = style == settings.rainbowStyle ? .on : .off
+                styles.addItem(item)
+            }
+            styleItem.submenu = styles
+            styleItem.image = gradientSwatch(settings.rainbowStyle, width: 28)
+            menu.addItem(styleItem)
+
             menu.addItem(sliderItem(title: "Akış Hızı", value: settings.rainbowSpeed) { [weak self] value in
                 Settings.shared.rainbowSpeed = value
                 self?.controller.applyStyle()
             })
+
+            let reverse = actionItem("Ters Yön (sağdan sola)", #selector(toggleRainbowReversed))
+            reverse.state = settings.rainbowReversed ? .on : .off
+            menu.addItem(reverse)
         }
 
         let hexItem = actionItem("Renk Kodu Gir…", #selector(enterHexCode))
@@ -176,6 +193,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func selectRainbow() {
         Settings.shared.rainbow = true
+        controller.applyStyle()
+    }
+
+    @objc private func selectRainbowStyle(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let style = RainbowStyle(rawValue: raw) else { return }
+        Settings.shared.rainbowStyle = style
+        Settings.shared.rainbow = true
+        controller.applyStyle()
+    }
+
+    @objc private func toggleRainbowReversed() {
+        Settings.shared.rainbowReversed.toggle()
         controller.applyStyle()
     }
 
@@ -289,11 +318,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func rainbowSwatch() -> NSImage {
-        NSImage(size: NSSize(width: 14, height: 14), flipped: false) { rect in
-            let path = NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1))
-            let gradient = NSGradient(colors: [.systemRed, .systemOrange, .systemYellow, .systemGreen, .systemBlue, .systemPurple])
-            gradient?.draw(in: path, angle: 0)
+    private func gradientSwatch(_ style: RainbowStyle, width: CGFloat) -> NSImage {
+        NSImage(size: NSSize(width: width, height: 14), flipped: false) { rect in
+            let shape = rect.insetBy(dx: 1, dy: 1)
+            let path = width > 14
+                ? NSBezierPath(roundedRect: shape, xRadius: 3, yRadius: 3)
+                : NSBezierPath(ovalIn: shape)
+            NSGradient(colors: style.cycle + [style.cycle[0]])?.draw(in: path, angle: 0)
             NSColor.black.withAlphaComponent(0.25).setStroke()
             path.lineWidth = 0.5
             path.stroke()
