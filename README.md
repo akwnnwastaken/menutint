@@ -5,7 +5,7 @@ macOS menü çubuğundaki **beyaz** simgeleri ve yazıları (saat, Wi‑Fi, pil,
 - Menü içinde **84 renklik palet** (tıkladığın an uygulanır, menü açık kalır)
 - **Renk kodu girme** (`#FF8800`, `FF8800`, `#F80`): yazarken canlı önizleme
 - **Gelişmiş Renk Seçici** (macOS renk tekerleği, kaydırıcılar, damlalık)
-- **Son Kullanılanlar** satırı ve akan **Gökkuşağı** modu: 10 stil (Klasik, Pastel, Derin, Neon, Gün Batımı, Okyanus, Orman, Ateş, Kutup Işıkları, Şeker), hız ve yön ayarı
+- **Son Kullanılanlar** satırı ve akan **Gökkuşağı** modu: 11 stil (Klasik, Pastel, Derin, Neon, Koyu Mor, Gün Batımı, Okyanus, Orman, Ateş, Kutup Işıkları, Şeker), hız ve yön ayarı
 - **Yoğunluk**: rengin ne kadar güçlü uygulanacağı
 - **Hassasiyet**: yükseldikçe sönük/gri öğeler de boyanır
 - Birden fazla ekran desteği, girişte otomatik başlatma

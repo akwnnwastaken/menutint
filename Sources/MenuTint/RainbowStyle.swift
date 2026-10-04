@@ -6,6 +6,7 @@ enum RainbowStyle: String, CaseIterable {
     case pastel
     case deep
     case neon
+    case darkPurple
     case sunset
     case ocean
     case forest
@@ -19,6 +20,7 @@ enum RainbowStyle: String, CaseIterable {
         case .pastel: return "Pastel (açık tonlar)"
         case .deep: return "Derin (koyu tonlar)"
         case .neon: return "Neon"
+        case .darkPurple: return "Koyu Mor"
         case .sunset: return "Gün Batımı"
         case .ocean: return "Okyanus"
         case .forest: return "Orman"
@@ -35,6 +37,7 @@ enum RainbowStyle: String, CaseIterable {
         case .pastel: return Self.hues(saturation: 0.35, brightness: 1)
         case .deep: return Self.hues(saturation: 0.95, brightness: 0.65)
         case .neon: return Self.hues(saturation: 1, brightness: 1)
+        case .darkPurple: return Self.colors("#5A189A", "#7B2CBF", "#3C096C", "#6A0DAD", "#4B0082")
         case .sunset: return Self.colors("#FF9500", "#FF5E3A", "#FF2D55", "#C643FC")
         case .ocean: return Self.colors("#34E0D0", "#00C6FF", "#0072FF", "#5856D6")
         case .forest: return Self.colors("#A8E063", "#34C759", "#0B8A3E", "#6BCB77")
