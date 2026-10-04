@@ -4,12 +4,12 @@ import IOSurface
 import ScreenCaptureKit
 
 /// Receives the two menu bar captures (scene + items-only) from ScreenCaptureKit
-/// and renders the tinted overlay on its own queue.
+/// and renders the overlay's base and mask images on its own queue.
 final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     let queue = DispatchQueue(label: "MenuTint.frames", qos: .userInteractive)
 
     private let renderer: TintRenderer
-    private let onFrame: @Sendable (IOSurface) -> Void
+    private let onFrame: @Sendable (TintRenderer.Output) -> Void
     private let onStop: @Sendable (Error) -> Void
 
     /// Set before capture starts; used to tell the two streams apart.
@@ -27,10 +27,6 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     private static let minimumDrawInterval = DispatchTimeInterval.milliseconds(50)
     private var drawScheduled = false
 
-    // Flowing rainbow
-    private static let animationFPS = 30
-    private var animationTimer: DispatchSourceTimer?
-    private var animationPeriod: Double = 0
     private var lastDraw = DispatchTime(uptimeNanoseconds: 0)
     private var lastItems: CIImage?
     /// Raw bytes of the previous frame of each stream, to skip identical frames.
@@ -39,29 +35,18 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
 
     init(
         maskCube: Data,
-        fill: TintRenderer.Fill,
-        onFrame: @escaping @Sendable (IOSurface) -> Void,
+        onFrame: @escaping @Sendable (TintRenderer.Output) -> Void,
         onStop: @escaping @Sendable (Error) -> Void
     ) {
-        renderer = TintRenderer(maskCube: maskCube, fill: fill)
+        renderer = TintRenderer(maskCube: maskCube)
         self.onFrame = onFrame
         self.onStop = onStop
         super.init()
-        queue.async { self.configureAnimation() }
     }
 
-    func stopAnimation() {
-        queue.async {
-            self.animationTimer?.cancel()
-            self.animationTimer = nil
-        }
-    }
-
-    func update(maskCube: Data, fill: TintRenderer.Fill) {
+    func update(maskCube: Data) {
         queue.async {
             self.renderer.setMaskCube(maskCube)
-            self.renderer.fill = fill
-            self.configureAnimation()
             self.scheduleDraw()
         }
     }
@@ -107,30 +92,6 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
 
     // MARK: Private
 
-    /// Starts, retimes or stops the flowing-rainbow timer to match `renderer.fill`.
-    private func configureAnimation() {
-        guard case .rainbow(let speed) = renderer.fill, speed > 0.001 else {
-            animationTimer?.cancel()
-            animationTimer = nil
-            return
-        }
-        // Seconds per full cycle: 20 s at the slowest, 1.5 s at the fastest.
-        animationPeriod = 20 - (20 - 1.5) * min(speed, 1)
-        guard animationTimer == nil else { return }
-
-        let timer = DispatchSource.makeTimerSource(queue: queue)
-        let interval = 1 / Double(Self.animationFPS)
-        timer.schedule(deadline: .now(), repeating: interval, leeway: .milliseconds(5))
-        timer.setEventHandler { [weak self] in
-            guard let self else { return }
-            let phase = self.renderer.rainbowPhase + CGFloat(interval / self.animationPeriod)
-            self.renderer.rainbowPhase = phase.truncatingRemainder(dividingBy: 1)
-            self.draw()
-        }
-        timer.resume()
-        animationTimer = timer
-    }
-
     private func scheduleDraw() {
         guard !drawScheduled else { return }
         drawScheduled = true
@@ -145,8 +106,8 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
 
     private func draw() {
         guard let scene = lastScene, let items = lastItems, scene.extent == items.extent else { return }
-        if let image = renderer.render(scene: scene, items: items, appMenuWidth: appMenuWidth) {
-            onFrame(image)
+        if let output = renderer.render(scene: scene, items: items, appMenuWidth: appMenuWidth) {
+            onFrame(output)
         }
     }
 

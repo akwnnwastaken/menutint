@@ -164,6 +164,6 @@ final class TintController: NSObject {
             return .rainbow(speed: Settings.shared.rainbowSpeed)
         }
         let color = Settings.shared.color.usingColorSpace(.sRGB) ?? .white
-        return .solid(CIColor(cgColor: color.cgColor))
+        return .solid(color.cgColor)
     }
 }

@@ -21,7 +21,14 @@ final class MenuBarTinter {
 
     var onStreamStopped: (() -> Void)?
 
-    private let hostLayer: CALayer
+    /// `(scene − whiteness)`: the menu bar with its white removed, around the items.
+    private let baseLayer: CALayer
+    /// The colour, shown through `colorMask` and added on top of `baseLayer`.
+    private let colorLayer: CALayer
+    /// Whiteness as alpha.
+    private let colorMask: CALayer
+    /// Two seamless hue cycles, twice the bar's width (rainbow mode).
+    private let rainbowLayer: CAGradientLayer
     /// Menu bar area in display-local points (top-left origin), as ScreenCaptureKit expects.
     private let captureRect: CGRect
     private let scale: CGFloat
@@ -62,22 +69,53 @@ final class MenuBarTinter {
         window.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
 
-        let layer = CALayer()
-        layer.contentsGravity = .resize
-        let view = NSView(frame: NSRect(origin: .zero, size: frame.size))
-        view.layer = layer
+        let bounds = CGRect(origin: .zero, size: frame.size)
+        let root = CALayer()
+        root.frame = bounds
+
+        let base = CALayer()
+        base.frame = bounds
+        base.contentsGravity = .resize
+        root.addSublayer(base)
+
+        let mask = CALayer()
+        mask.frame = bounds
+        mask.contentsGravity = .resize
+
+        let color = CALayer()
+        color.frame = bounds
+        color.masksToBounds = true
+        color.mask = mask
+        // Adds the colour instead of painting over: base + whiteness·colour.
+        color.compositingFilter = CIFilter(name: "CIAdditionCompositing")
+        root.addSublayer(color)
+
+        let rainbow = CAGradientLayer()
+        rainbow.frame = CGRect(x: -bounds.width, y: 0, width: bounds.width * 2, height: bounds.height)
+        rainbow.startPoint = CGPoint(x: 0, y: 0.5)
+        rainbow.endPoint = CGPoint(x: 1, y: 0.5)
+        rainbow.colors = Self.rainbowColors()
+        rainbow.isHidden = true
+        color.addSublayer(rainbow)
+
+        let view = NSView(frame: bounds)
+        view.layer = root
         view.wantsLayer = true
         window.contentView = view
         window.setFrame(frame, display: false)
         window.orderFrontRegardless()
 
         self.window = window
-        self.hostLayer = layer
+        self.baseLayer = base
+        self.colorLayer = color
+        self.colorMask = mask
+        self.rainbowLayer = rainbow
     }
 
     /// Starts both captures of this display's menu bar strip.
     func start(display: SCDisplay, content: SCShareableContent, overlays: [SCWindow], maskCube: Data, fill: TintRenderer.Fill) async throws {
         guard !stopped else { return }
+        apply(fill: fill)
 
         let overlayIDs = Set(overlays.map(\.windowID))
         let items = menuBarWindows(in: content, display: display, overlayIDs: overlayIDs)
@@ -86,7 +124,6 @@ final class MenuBarTinter {
 
         let processor = FrameProcessor(
             maskCube: maskCube,
-            fill: fill,
             onFrame: { [weak self] image in
                 DispatchQueue.main.async { self?.present(image) }
             },
@@ -185,13 +222,63 @@ final class MenuBarTinter {
     }
 
     func update(maskCube: Data, fill: TintRenderer.Fill) {
-        processor?.update(maskCube: maskCube, fill: fill)
+        processor?.update(maskCube: maskCube)
+        apply(fill: fill)
+    }
+
+    /// Sets the colour, or starts/retimes/stops the flowing rainbow.
+    /// The animation runs in the window server, so it costs MenuTint no CPU.
+    private func apply(fill: TintRenderer.Fill) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        switch fill {
+        case .solid(let color):
+            rainbowLayer.removeAllAnimations()
+            rainbowLayer.isHidden = true
+            colorLayer.backgroundColor = color
+        case .rainbow(let speed):
+            colorLayer.backgroundColor = nil
+            rainbowLayer.isHidden = false
+            let width = colorLayer.bounds.width
+            if speed > 0.001 {
+                // Seconds per full cycle: 20 s at the slowest, 1.5 s at the fastest.
+                let period = 20 - (20 - 1.5) * min(speed, 1)
+                let existing = rainbowLayer.animation(forKey: "flow") as? CABasicAnimation
+                if existing.map({ abs($0.duration - period) > 0.01 }) ?? true {
+                    let flow = CABasicAnimation(keyPath: "transform.translation.x")
+                    flow.fromValue = 0
+                    flow.toValue = width
+                    flow.duration = period
+                    flow.repeatCount = .infinity
+                    flow.isRemovedOnCompletion = false
+                    // Keep the rainbow where it is when only the speed changes.
+                    if existing != nil, width > 0,
+                       let x = rainbowLayer.presentation()?.value(forKeyPath: "transform.translation.x") as? CGFloat {
+                        flow.timeOffset = period * Double(x / width)
+                    }
+                    rainbowLayer.add(flow, forKey: "flow")
+                }
+            } else {
+                rainbowLayer.removeAllAnimations()
+            }
+        }
+        CATransaction.commit()
+    }
+
+    private static func rainbowColors() -> [CGColor] {
+        let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
+        let stepsPerCycle = 12
+        return (0...(stepsPerCycle * 2)).map { step in
+            let hue = CGFloat(step % stepsPerCycle) / CGFloat(stepsPerCycle)
+            let color = NSColor(hue: hue, saturation: 0.75, brightness: 1, alpha: 1)
+            let rgb = color.usingColorSpace(.sRGB) ?? color
+            return CGColor(colorSpace: sRGB, components: [rgb.redComponent, rgb.greenComponent, rgb.blueComponent, 1])!
+        }
     }
 
     func stop() {
         stopped = true
         let stoppingProcessor = processor
-        stoppingProcessor?.stopAnimation()
         for stream in [sceneStream, itemsStream].compactMap({ $0 }) {
             stream.stopCapture { _ in
                 withExtendedLifetime(stoppingProcessor) {}
@@ -203,11 +290,12 @@ final class MenuBarTinter {
         window.orderOut(nil)
     }
 
-    private func present(_ image: IOSurface) {
+    private func present(_ output: TintRenderer.Output) {
         guard !stopped else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        hostLayer.contents = image
+        baseLayer.contents = output.base
+        colorMask.contents = output.mask
         CATransaction.commit()
     }
 

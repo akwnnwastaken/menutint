@@ -64,7 +64,7 @@ Menü çubuğundaki palet simgesine tıkla:
 | Renklendirme Açık | Boyamayı açar/kapatır |
 | Renk Paleti | 84 renkten birine tıkla; menü açık kalır, renkleri hızlıca deneyebilirsin |
 | Son Kullanılanlar | Kod ile girdiğin veya gelişmiş seçiciden aldığın renkler |
-| Gökkuşağı | Menü çubuğu boyunca soldan sağa akan renk geçişi. Seçiliyken **Akış Hızı** kaydırıcısı çıkar (en sol = sabit). Akarken işlemci kullanımı biraz artar |
+| Gökkuşağı | Menü çubuğu boyunca soldan sağa akan renk geçişi. Seçiliyken **Akış Hızı** kaydırıcısı çıkar (en sol = sabit). Animasyonu macOS'un pencere sunucusu çalıştırır, MenuTint'e ek yük getirmez |
 | Renk Kodu Gir… | Hex kod yaz (`#FF8800`, `FF8800`, `#F80`). Yazarken önizlenir, Vazgeç eski renge döner |
 | Gelişmiş Renk Seçici… | macOS renk paneli: tekerlek, RGB/HSB kaydırıcıları, ekrandan renk alma |
 | Yoğunluk | %0 = orijinal beyaz, %100 = tam renk |

@@ -1,36 +1,44 @@
 import CoreImage
-import Foundation
 import CoreVideo
+import Foundation
 import IOSurface
 
-/// Rebuilds the menu bar with its white items recoloured.
+/// Splits the menu bar into the two images the overlay needs to show its white
+/// items in any colour.
 ///
 /// Two captures of the same strip are used:
 /// - `scene`: the menu bar exactly as it looks on screen,
 /// - `items`: only the menu bar's own windows, over black.
+///
+/// A white item drawn with coverage `a` over background `bg` looks like
+/// `bg·(1−a) + a`. The overlay shows `(scene − a) + a·colour`, i.e.
+/// `bg·(1−a) + a·colour`: the same item in the new colour, with anti-aliased
+/// edges blended into the real background. The two terms are produced here:
+///
+/// - `base` = `scene − a`, opaque around the items (2 px margin) so the white
+///   originals underneath are fully covered, transparent everywhere else;
+/// - `mask` = `a` as alpha, through which the overlay adds the colour.
+///
+/// Because the colour is applied by Core Animation, a flowing rainbow costs
+/// nothing here: these images only change when the menu bar does.
 ///
 /// App menu titles (Finder, File, Edit…) don't show up in `items` (they are drawn
 /// with vibrancy), so for the area left of the status items the whiteness is
 /// taken from `scene` instead. The menu bar background is dark there and
 /// coloured pixels are ignored, so only the light text is picked up.
 ///
-/// A white item drawn with coverage `a` over background `bg` looks like
-/// `bg·(1−a) + a`. Subtracting `a·(1 − tint)` gives `bg·(1−a) + a·tint`: the same
-/// item in the tint colour, with its anti-aliased edges blended into the real
-/// background. The result is opaque around the items so the white originals
-/// underneath are fully covered; everywhere else it is transparent.
-///
 /// Not thread-safe: use it from a single queue.
 final class TintRenderer {
     enum Fill {
-        case solid(CIColor)
+        case solid(CGColor)
         /// `speed` 0...1: 0 = still, otherwise the rainbow flows left to right.
         case rainbow(speed: Double)
     }
 
-    var fill: Fill
-    /// 0..<1 — how far the flowing rainbow has moved (one full cycle = 1).
-    var rainbowPhase: CGFloat = 0
+    struct Output {
+        let base: IOSurface
+        let mask: IOSurface
+    }
 
     private let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
     /// Works in (non-linear) sRGB, the space macOS composites the menu bar in,
@@ -41,14 +49,13 @@ final class TintRenderer {
     ])
     private let maskFilter = CIFilter(name: "CIColorCubeWithColorSpace")!
 
-    /// Output surfaces, rendered on the GPU and shown by the overlay layer as-is
-    /// (no copy back to the CPU). Several are rotated so the one on screen is
-    /// never overwritten.
-    private var surfaces: [IOSurface] = []
+    /// Output surfaces, rendered on the GPU and shown by the overlay as-is (no copy
+    /// back to the CPU). Several pairs are rotated so the ones on screen are never
+    /// overwritten.
+    private var surfaces: [(base: IOSurface, mask: IOSurface)] = []
     private var nextSurface = 0
 
-    init(maskCube: Data, fill: Fill) {
-        self.fill = fill
+    init(maskCube: Data) {
         maskFilter.setValue(MaskLUT.dimension, forKey: "inputCubeDimension")
         maskFilter.setValue(sRGB, forKey: "inputColorSpace")
         setMaskCube(maskCube)
@@ -60,7 +67,7 @@ final class TintRenderer {
 
     /// - Parameter appMenuWidth: width in pixels, from the left edge, of the area
     ///   holding the app menus.
-    func render(scene: CIImage, items: CIImage, appMenuWidth: CGFloat) -> IOSurface? {
+    func render(scene: CIImage, items: CIImage, appMenuWidth: CGFloat) -> Output? {
         let extent = scene.extent
 
         // a: how white each pixel of the items is (0 = not part of a white item).
@@ -89,20 +96,8 @@ final class TintRenderer {
             }
         }
 
-        let color: CIImage
-        switch fill {
-        case .solid(let tint):
-            color = CIImage(color: tint).cropped(to: extent)
-        case .rainbow:
-            color = Self.rainbow(covering: extent, phase: rainbowPhase)
-        }
-
-        // a · (1 − tint)
-        let delta = color
-            .applyingFilter("CIColorInvert")
-            .applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: whiteness])
-        // scene − a · (1 − tint)
-        let recoloured = delta
+        // scene − a
+        let withoutWhite = whiteness
             .applyingFilter("CISubtractBlendMode", parameters: [kCIInputBackgroundImageKey: scene])
             .cropped(to: extent)
 
@@ -118,27 +113,39 @@ final class TintRenderer {
             .applyingFilter("CIColorClamp")
             .cropped(to: extent)
 
-        let output = recoloured.applyingFilter("CIBlendWithMask", parameters: [
+        let base = withoutWhite.applyingFilter("CIBlendWithMask", parameters: [
             kCIInputBackgroundImageKey: CIImage(color: .clear).cropped(to: extent),
             kCIInputMaskImageKey: coverMask,
         ])
-        guard let surface = takeSurface(width: Int(extent.width), height: Int(extent.height)) else { return nil }
-        context.render(output, to: surface, bounds: extent, colorSpace: sRGB)
-        return surface
+
+        // Whiteness as (premultiplied) alpha, for the colour layer's mask.
+        let mask = whiteness.applyingFilter("CIColorMatrix", parameters: [
+            "inputAVector": CIVector(x: 1, y: 0, z: 0, w: 0),
+        ])
+
+        guard let target = takeSurfaces(width: Int(extent.width), height: Int(extent.height)) else { return nil }
+        context.render(base, to: target.base, bounds: extent, colorSpace: sRGB)
+        context.render(mask, to: target.mask, bounds: extent, colorSpace: sRGB)
+        return Output(base: target.base, mask: target.mask)
     }
 
-    private func takeSurface(width: Int, height: Int) -> IOSurface? {
-        if surfaces.first.map({ $0.width != width || $0.height != height }) ?? true {
-            surfaces = (0..<3).compactMap { _ in makeSurface(width: width, height: height) }
+    private func takeSurfaces(width: Int, height: Int) -> (base: IOSurface, mask: IOSurface)? {
+        if surfaces.first.map({ $0.base.width != width || $0.base.height != height }) ?? true {
+            surfaces = (0..<3).compactMap { _ in
+                guard let base = makeSurface(width: width, height: height),
+                      let mask = makeSurface(width: width, height: height)
+                else { return nil }
+                return (base, mask)
+            }
             nextSurface = 0
         }
         guard !surfaces.isEmpty else { return nil }
-        // Skip any surface the window server is still showing.
+        // Skip any pair the window server is still showing.
         for _ in 0..<surfaces.count {
-            let surface = surfaces[nextSurface]
+            let pair = surfaces[nextSurface]
             nextSurface = (nextSurface + 1) % surfaces.count
-            if !surface.isInUse {
-                return surface
+            if !pair.base.isInUse && !pair.mask.isInUse {
+                return pair
             }
         }
         return nil
@@ -155,64 +162,5 @@ final class TintRenderer {
             IOSurfaceSetValue(surface, kIOSurfaceColorSpace, colorSpace)
         }
         return surface
-    }
-
-    // MARK: - Rainbow
-
-    /// The strip holds two full hue cycles, so it can be shifted by up to one
-    /// cycle and still cover the whole bar seamlessly.
-    private static let rainbowWidth = 512
-
-    private static let rainbowStrip: CIImage = {
-        let width = rainbowWidth
-        var pixels = [UInt8](repeating: 255, count: width * 4)
-        for x in 0..<width {
-            let (r, g, b) = hsvToRGB(h: 2 * (Double(x) + 0.5) / Double(width), s: 0.75, v: 1)
-            pixels[x * 4] = UInt8((r * 255).rounded())
-            pixels[x * 4 + 1] = UInt8((g * 255).rounded())
-            pixels[x * 4 + 2] = UInt8((b * 255).rounded())
-        }
-        let provider = CGDataProvider(data: Data(pixels) as CFData)!
-        let image = CGImage(
-            width: width,
-            height: 1,
-            bitsPerComponent: 8,
-            bitsPerPixel: 32,
-            bytesPerRow: width * 4,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!,
-            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
-            provider: provider,
-            decode: nil,
-            shouldInterpolate: true,
-            intent: .defaultIntent
-        )!
-        return CIImage(cgImage: image)
-    }()
-
-    /// One hue cycle spans the bar's width; increasing `phase` moves it to the right.
-    private static func rainbow(covering extent: CGRect, phase: CGFloat) -> CIImage {
-        let offset = extent.minX + (phase - 1) * extent.width
-        return rainbowStrip
-            .clampedToExtent()
-            .transformed(by: CGAffineTransform(scaleX: 2 * extent.width / CGFloat(rainbowWidth), y: extent.height))
-            .transformed(by: CGAffineTransform(translationX: offset, y: 0))
-            .cropped(to: extent)
-    }
-
-    private static func hsvToRGB(h: Double, s: Double, v: Double) -> (Double, Double, Double) {
-        let sector = (h * 6).truncatingRemainder(dividingBy: 6)
-        let c = v * s
-        let x = c * (1 - abs(sector.truncatingRemainder(dividingBy: 2) - 1))
-        let m = v - c
-        let (r, g, b): (Double, Double, Double)
-        switch Int(sector) {
-        case 0: (r, g, b) = (c, x, 0)
-        case 1: (r, g, b) = (x, c, 0)
-        case 2: (r, g, b) = (0, c, x)
-        case 3: (r, g, b) = (0, x, c)
-        case 4: (r, g, b) = (x, 0, c)
-        default: (r, g, b) = (c, 0, x)
-        }
-        return (r + m, g + m, b + m)
     }
 }
