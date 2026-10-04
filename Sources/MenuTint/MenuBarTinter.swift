@@ -1,4 +1,5 @@
 import AppKit
+import IOSurface
 import ScreenCaptureKit
 
 /// Borderless window that may sit on top of the menu bar.
@@ -201,7 +202,7 @@ final class MenuBarTinter {
         window.orderOut(nil)
     }
 
-    private func present(_ image: CGImage) {
+    private func present(_ image: IOSurface) {
         guard !stopped else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)

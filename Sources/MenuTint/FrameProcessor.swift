@@ -1,5 +1,6 @@
 import CoreImage
 import CoreMedia
+import IOSurface
 import ScreenCaptureKit
 
 /// Receives the two menu bar captures (scene + items-only) from ScreenCaptureKit
@@ -8,7 +9,7 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     let queue = DispatchQueue(label: "MenuTint.frames", qos: .userInteractive)
 
     private let renderer: TintRenderer
-    private let onFrame: @Sendable (CGImage) -> Void
+    private let onFrame: @Sendable (IOSurface) -> Void
     private let onStop: @Sendable (Error) -> Void
 
     /// Set before capture starts; used to tell the two streams apart.
@@ -31,7 +32,7 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     init(
         maskCube: Data,
         fill: TintRenderer.Fill,
-        onFrame: @escaping @Sendable (CGImage) -> Void,
+        onFrame: @escaping @Sendable (IOSurface) -> Void,
         onStop: @escaping @Sendable (Error) -> Void
     ) {
         renderer = TintRenderer(maskCube: maskCube, fill: fill)

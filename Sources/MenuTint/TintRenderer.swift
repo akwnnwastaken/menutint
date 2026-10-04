@@ -1,5 +1,7 @@
 import CoreImage
 import Foundation
+import CoreVideo
+import IOSurface
 
 /// Rebuilds the menu bar with its white items recoloured.
 ///
@@ -36,6 +38,12 @@ final class TintRenderer {
     ])
     private let maskFilter = CIFilter(name: "CIColorCubeWithColorSpace")!
 
+    /// Output surfaces, rendered on the GPU and shown by the overlay layer as-is
+    /// (no copy back to the CPU). Several are rotated so the one on screen is
+    /// never overwritten.
+    private var surfaces: [IOSurface] = []
+    private var nextSurface = 0
+
     init(maskCube: Data, fill: Fill) {
         self.fill = fill
         maskFilter.setValue(MaskLUT.dimension, forKey: "inputCubeDimension")
@@ -49,7 +57,7 @@ final class TintRenderer {
 
     /// - Parameter appMenuWidth: width in pixels, from the left edge, of the area
     ///   holding the app menus.
-    func render(scene: CIImage, items: CIImage, appMenuWidth: CGFloat) -> CGImage? {
+    func render(scene: CIImage, items: CIImage, appMenuWidth: CGFloat) -> IOSurface? {
         let extent = scene.extent
 
         // a: how white each pixel of the items is (0 = not part of a white item).
@@ -111,7 +119,39 @@ final class TintRenderer {
             kCIInputBackgroundImageKey: CIImage(color: .clear).cropped(to: extent),
             kCIInputMaskImageKey: coverMask,
         ])
-        return context.createCGImage(output, from: extent, format: .RGBA8, colorSpace: sRGB)
+        guard let surface = takeSurface(width: Int(extent.width), height: Int(extent.height)) else { return nil }
+        context.render(output, to: surface, bounds: extent, colorSpace: sRGB)
+        return surface
+    }
+
+    private func takeSurface(width: Int, height: Int) -> IOSurface? {
+        if surfaces.first.map({ $0.width != width || $0.height != height }) ?? true {
+            surfaces = (0..<3).compactMap { _ in makeSurface(width: width, height: height) }
+            nextSurface = 0
+        }
+        guard !surfaces.isEmpty else { return nil }
+        // Skip any surface the window server is still showing.
+        for _ in 0..<surfaces.count {
+            let surface = surfaces[nextSurface]
+            nextSurface = (nextSurface + 1) % surfaces.count
+            if !surface.isInUse {
+                return surface
+            }
+        }
+        return nil
+    }
+
+    private func makeSurface(width: Int, height: Int) -> IOSurface? {
+        guard let surface = IOSurface(properties: [
+            .width: width,
+            .height: height,
+            .bytesPerElement: 4,
+            .pixelFormat: kCVPixelFormatType_32BGRA,
+        ]) else { return nil }
+        if let colorSpace = sRGB.copyPropertyList() {
+            IOSurfaceSetValue(surface, kIOSurfaceColorSpace, colorSpace)
+        }
+        return surface
     }
 
     // MARK: - Rainbow
