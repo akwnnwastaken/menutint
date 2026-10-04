@@ -28,6 +28,9 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
     private var drawScheduled = false
     private var lastDraw = DispatchTime(uptimeNanoseconds: 0)
     private var lastItems: CIImage?
+    /// Raw bytes of the previous frame of each stream, to skip identical frames.
+    private var lastSceneBytes = Data()
+    private var lastItemsBytes = Data()
 
     init(
         maskCube: Data,
@@ -67,11 +70,16 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
               let pixelBuffer = sampleBuffer.imageBuffer
         else { return }
 
-        let frame = CIImage(cvPixelBuffer: pixelBuffer)
+        // ScreenCaptureKit also delivers frames for changes elsewhere on screen;
+        // only redraw when the menu bar strip itself changed.
         if stream === itemsStream {
-            lastItems = frame
+            guard Self.storeIfChanged(pixelBuffer, previous: &lastItemsBytes) else { return }
+            lastItems = CIImage(cvPixelBuffer: pixelBuffer)
         } else if stream === sceneStream {
-            lastScene = frame
+            guard Self.storeIfChanged(pixelBuffer, previous: &lastSceneBytes) else { return }
+            lastScene = CIImage(cvPixelBuffer: pixelBuffer)
+        } else {
+            return
         }
         scheduleDraw()
     }
@@ -102,6 +110,22 @@ final class FrameProcessor: NSObject, SCStreamOutput, SCStreamDelegate {
         if let image = renderer.render(scene: scene, items: items, appMenuWidth: appMenuWidth) {
             onFrame(image)
         }
+    }
+
+    /// Compares the frame with `previous`; if it differs, stores it and returns true.
+    private static func storeIfChanged(_ pixelBuffer: CVPixelBuffer, previous: inout Data) -> Bool {
+        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
+        guard let base = CVPixelBufferGetBaseAddress(pixelBuffer) else { return true }
+        let count = CVPixelBufferGetBytesPerRow(pixelBuffer) * CVPixelBufferGetHeight(pixelBuffer)
+        let unchanged = previous.count == count && previous.withUnsafeBytes { bytes in
+            memcmp(bytes.baseAddress!, base, count) == 0
+        }
+        if unchanged {
+            return false
+        }
+        previous = Data(bytes: base, count: count)
+        return true
     }
 
     /// False when ScreenCaptureKit reports that nothing inside the captured
