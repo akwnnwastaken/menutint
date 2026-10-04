@@ -8,6 +8,8 @@
 	<string>MenuTint</string>
 	<key>CFBundleExecutable</key>
 	<string>MenuTint</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>io.github.akwnnwastaken.menutint</string>
 	<key>CFBundleInfoDictionaryVersion</key>

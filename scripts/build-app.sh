@@ -17,6 +17,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/MenuTint" "$APP/Contents/MacOS/MenuTint"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 # With a stable identity (see create-signing-cert.sh) macOS keeps the Screen
 # Recording permission across rebuilds; an ad-hoc signature changes every build.

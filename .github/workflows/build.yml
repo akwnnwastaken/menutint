@@ -14,6 +14,12 @@ jobs:
       - name: Build MenuTint.app
         run: ./scripts/build-app.sh
 
+      - name: Check app icon
+        run: |
+          test -f build/MenuTint.app/Contents/Resources/AppIcon.icns
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" build/MenuTint.app/Contents/Info.plist
+          sips -g pixelWidth build/MenuTint.app/Contents/Resources/AppIcon.icns
+
       - name: Zip
         run: ditto -c -k --keepParent build/MenuTint.app build/MenuTint.zip
 
