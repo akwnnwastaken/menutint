@@ -8,7 +8,7 @@ set -euo pipefail
 NAME="MenuTint Self-Signed"
 
 if security find-identity -p codesigning | grep "$NAME" >/dev/null; then
-    echo "\"$NAME\" sertifikası zaten var."
+    echo "\"$NAME\" already exists."
     exit 0
 fi
 
@@ -36,4 +36,4 @@ EOF
 security import "$TMP/identity.p12" -k "$HOME/Library/Keychains/login.keychain-db" \
     -P menutint -T /usr/bin/codesign
 
-echo "Hazır: \"$NAME\" oluşturuldu. Artık ./scripts/build-app.sh bu imzayı kullanacak."
+echo "Done: created \"$NAME\". ./scripts/build-app.sh will now sign with it."

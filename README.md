@@ -57,9 +57,6 @@ Current release: **v1.0.0**.
 > [!NOTE]
 > The app is distributed unsigned, so Gatekeeper warns you the first time you open it. Follow the steps in [Installation](#installation).
 
-> [!NOTE]
-> The app's menu labels are currently in Turkish. The [Usage](#usage) table lists each Turkish label next to its English meaning.
-
 ---
 
 ## How does it work?
@@ -117,27 +114,27 @@ open /Applications/MenuTint.app
 MenuTint needs the **Screen Recording** permission to see the menu bar:
 
 1. In the permission dialog shown on first launch, open **System Settings**
-   (or choose **Ekran Kaydı İzni Ver…**, "Grant Screen Recording Permission…", from the MenuTint menu).
+   (or choose **Grant Screen Recording Permission…** from the MenuTint menu).
 2. Under *Privacy & Security → Screen & System Audio Recording*, turn on **MenuTint**.
-3. Choose **MenuTint'i Yeniden Başlat** ("Restart MenuTint") from the MenuTint menu.
+3. Choose **Restart MenuTint** from the MenuTint menu.
 
 Captured images are never saved or sent anywhere. They are painted and shown on screen only momentarily.
 
 ## Usage
 
-Click the palette icon in the menu bar. The menu labels in the app are in Turkish; the English meaning is given in parentheses.
+Click the palette icon in the menu bar.
 
 | Item | What it does |
 | --- | --- |
-| Renklendirme Açık (Tinting On) | Turns tinting on or off |
-| Renk Paleti (Color Palette) | Click one of the 84 colors; the menu stays open so you can try colors quickly |
-| Son Kullanılanlar (Recent) | Colors you entered as a code or picked with the advanced picker |
-| Gökkuşağı (Rainbow) | A color gradient that flows left to right across the menu bar. When selected, a **Gökkuşağı Stili** (Rainbow Style) submenu, an **Akış Hızı** (Flow Speed) slider (far left = static), and a **Ters Yön** (Reverse Direction) option appear. macOS's window server runs the animation, so it adds no extra load to MenuTint |
-| Renk Kodu Gir… (Enter Color Code…) | Type a hex code (`#FF8800`, `FF8800`, `#F80`). It previews as you type, and Cancel returns to the previous color |
-| Gelişmiş Renk Seçici… (Advanced Color Picker…) | The macOS color panel: wheel, RGB/HSB sliders, and picking a color from the screen |
-| Yoğunluk (Intensity) | 0% = original white, 100% = full color |
-| Hassasiyet (Sensitivity) | Raise it to paint gray or dim items too; lower it if the menu bar background is being tinted as well |
-| Girişte Başlat (Launch at Login) | Starts automatically when your Mac starts (the app must be in `/Applications`) |
+| Tinting Enabled | Turns tinting on or off |
+| Color Palette | Click one of the 84 colors; the menu stays open so you can try colors quickly |
+| Recent Colors | Colors you entered as a code or picked with the advanced picker |
+| Rainbow | A color gradient that flows left to right across the menu bar. When selected, a **Rainbow Style** submenu, a **Flow Speed** slider (far left = static) and a **Reverse Direction** option appear. macOS's window server runs the animation, so it adds no extra load to MenuTint |
+| Enter Color Code… | Type a hex code (`#FF8800`, `FF8800`, `#F80`). It previews as you type, and Cancel returns to the previous color |
+| Advanced Color Picker… | The macOS color panel: wheel, RGB/HSB sliders, and picking a color from the screen |
+| Intensity | 0% = original white, 100% = full color |
+| Sensitivity | Raise it to paint gray or dim items too; lower it if the menu bar background is being tinted as well |
+| Launch at Login | Starts automatically when your Mac starts (the app must be in `/Applications`) |
 
 ## Privacy
 
@@ -145,7 +142,7 @@ Captured menu bar images are not written to disk and are not sent over the netwo
 
 ## Troubleshooting
 
-- **Nothing is being painted:** Check that the Screen Recording permission is on for MenuTint, then choose **MenuTint'i Yeniden Başlat** ("Restart MenuTint") from the menu.
+- **Nothing is being painted:** Check that the Screen Recording permission is on for MenuTint, then choose **Restart MenuTint** from the menu.
 - **The permission resets on every build:** If `./scripts/create-signing-cert.sh` hasn't been run, the signature changes on every build. Run the script once; if needed, reset the permission:
   ```bash
   tccutil reset ScreenCapture io.github.akwnnwastaken.menutint

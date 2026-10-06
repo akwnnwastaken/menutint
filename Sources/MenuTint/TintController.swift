@@ -124,7 +124,7 @@ final class TintController: NSObject {
                 }
                 guard currentGeneration == generation else { return }
             }
-            status = started > 0 ? .running(screens: started) : .failed("Ekran yakalama başlatılamadı")
+            status = started > 0 ? .running(screens: started) : .failed("Couldn't start screen capture")
             if started > 0 {
                 scheduleWindowRefresh()
             }
@@ -132,7 +132,7 @@ final class TintController: NSObject {
         }
 
         guard currentGeneration == generation else { return }
-        status = .failed("Kaplama pencereleri bulunamadı")
+        status = .failed("Overlay windows not found")
     }
 
     // New status items appear when apps launch; keep the captured window list current.

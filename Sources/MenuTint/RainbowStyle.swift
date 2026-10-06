@@ -16,17 +16,17 @@ enum RainbowStyle: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .classic: return "Klasik"
-        case .pastel: return "Pastel (açık tonlar)"
-        case .deep: return "Derin (koyu tonlar)"
+        case .classic: return "Classic"
+        case .pastel: return "Pastel (light tones)"
+        case .deep: return "Deep (dark tones)"
         case .neon: return "Neon"
-        case .darkPurple: return "Koyu Mor"
-        case .sunset: return "Gün Batımı"
-        case .ocean: return "Okyanus"
-        case .forest: return "Orman"
-        case .fire: return "Ateş"
-        case .aurora: return "Kutup Işıkları"
-        case .candy: return "Şeker"
+        case .darkPurple: return "Dark Purple"
+        case .sunset: return "Sunset"
+        case .ocean: return "Ocean"
+        case .forest: return "Forest"
+        case .fire: return "Fire"
+        case .aurora: return "Aurora"
+        case .candy: return "Candy"
         }
     }
 

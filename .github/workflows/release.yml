@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Sürüm etiketi (ör. v1.0.0)"
+        description: "Version tag (e.g. v1.0.0)"
         required: true
 
 permissions:
@@ -35,11 +35,11 @@ jobs:
           files: build/MenuTint.zip
           generate_release_notes: true
           body: |
-            macOS menü çubuğundaki beyaz simgeleri ve yazıları istediğin renge boyar.
+            Recolors the white icons and text in the macOS menu bar.
 
-            **Kurulum:** `MenuTint.zip` dosyasını indir, açıp `MenuTint.app`'i Uygulamalar klasörüne taşı.
-            Uygulama imzasız olduğu için ilk açılışta sağ tıklayıp **Aç**'ı seç
-            (veya `xattr -dr com.apple.quarantine /Applications/MenuTint.app`).
-            Ardından Ekran Kaydı iznini ver ve uygulamayı yeniden aç.
+            **Install:** download `MenuTint.zip`, unzip it and move `MenuTint.app` to your Applications folder.
+            The app isn't notarized, so the first time right-click it and choose **Open**
+            (or run `xattr -dr com.apple.quarantine /Applications/MenuTint.app`).
+            Then grant the Screen Recording permission and open the app again.
 
-            Gereksinim: macOS 13 veya üstü (Apple Silicon ve Intel).
+            Requires macOS 13 or later (Apple Silicon and Intel).

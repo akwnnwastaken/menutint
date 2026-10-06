@@ -26,7 +26,7 @@ if security find-identity -p codesigning 2>/dev/null | grep "$IDENTITY" >/dev/nu
     codesign --force --sign "$IDENTITY" "$APP"
 else
     codesign --force --sign - "$APP"
-    echo "Not: Ekran Kaydı izninin her derlemede sıfırlanmaması için bir kez ./scripts/create-signing-cert.sh çalıştır."
+    echo "Note: run ./scripts/create-signing-cert.sh once so the Screen Recording permission survives rebuilds."
 fi
 
-echo "Hazır: $APP"
+echo "Done: $APP"

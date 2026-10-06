@@ -44,6 +44,6 @@ final class SliderMenuView: NSView {
     }
 
     private func updateValueLabel() {
-        valueLabel.stringValue = "%\(Int((slider.doubleValue * 100).rounded()))"
+        valueLabel.stringValue = "\(Int((slider.doubleValue * 100).rounded()))%"
     }
 }

@@ -50,18 +50,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(disabledItem("MenuTint — \(statusText)"))
 
-        let toggle = actionItem("Renklendirme Açık", #selector(toggleEnabled))
+        let toggle = actionItem("Tinting Enabled", #selector(toggleEnabled))
         toggle.state = settings.enabled ? .on : .off
         menu.addItem(toggle)
 
         if controller.status == .needsPermission {
             menu.addItem(.separator())
-            menu.addItem(actionItem("Ekran Kaydı İzni Ver…", #selector(openScreenRecordingSettings)))
-            menu.addItem(actionItem("MenuTint'i Yeniden Başlat", #selector(relaunch)))
+            menu.addItem(actionItem("Grant Screen Recording Permission…", #selector(openScreenRecordingSettings)))
+            menu.addItem(actionItem("Restart MenuTint", #selector(relaunch)))
         }
 
         menu.addItem(.separator())
-        menu.addItem(disabledItem("Renk Paleti"))
+        menu.addItem(disabledItem("Color Palette"))
 
         // Colours picked from the system picker or typed as a code end up in "recent".
         if !settings.rainbow && !Self.paletteContains(settings.colorHex) {
@@ -81,7 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let recents = settings.recentColors
         if !recents.isEmpty {
-            menu.addItem(disabledItem("Son Kullanılanlar"))
+            menu.addItem(disabledItem("Recent Colors"))
             let recentGrid = ColorGridView(rows: [recents])
             grids.add(recentGrid)
             menu.addItem(viewItem(recentGrid))
@@ -91,12 +91,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             grid.onSelect = onSelect
         }
 
-        let rainbow = actionItem("Gökkuşağı", #selector(selectRainbow))
+        let rainbow = actionItem("Rainbow", #selector(selectRainbow))
         rainbow.image = gradientSwatch(settings.rainbowStyle, width: 14)
         rainbow.state = settings.rainbow ? .on : .off
         menu.addItem(rainbow)
         if settings.rainbow {
-            let styleItem = NSMenuItem(title: "Gökkuşağı Stili: \(settings.rainbowStyle.title)", action: nil, keyEquivalent: "")
+            let styleItem = NSMenuItem(title: "Rainbow Style: \(settings.rainbowStyle.title)", action: nil, keyEquivalent: "")
             let styles = NSMenu()
             for style in RainbowStyle.allCases {
                 let item = actionItem(style.title, #selector(selectRainbowStyle(_:)))
@@ -109,52 +109,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             styleItem.image = gradientSwatch(settings.rainbowStyle, width: 28)
             menu.addItem(styleItem)
 
-            menu.addItem(sliderItem(title: "Akış Hızı", value: settings.rainbowSpeed) { [weak self] value in
+            menu.addItem(sliderItem(title: "Flow Speed", value: settings.rainbowSpeed) { [weak self] value in
                 Settings.shared.rainbowSpeed = value
                 self?.controller.applyStyle()
             })
 
-            let reverse = actionItem("Ters Yön (sağdan sola)", #selector(toggleRainbowReversed))
+            let reverse = actionItem("Reverse Direction (right to left)", #selector(toggleRainbowReversed))
             reverse.state = settings.rainbowReversed ? .on : .off
             menu.addItem(reverse)
         }
 
-        let hexItem = actionItem("Renk Kodu Gir…", #selector(enterHexCode))
+        let hexItem = actionItem("Enter Color Code…", #selector(enterHexCode))
         if !settings.rainbow {
-            hexItem.title = "Renk Kodu Gir…  (\(settings.colorHex))"
+            hexItem.title = "Enter Color Code…  (\(settings.colorHex))"
             hexItem.image = swatch(settings.color)
         }
         menu.addItem(hexItem)
 
-        menu.addItem(actionItem("Gelişmiş Renk Seçici…", #selector(pickCustomColor)))
+        menu.addItem(actionItem("Advanced Color Picker…", #selector(pickCustomColor)))
 
         menu.addItem(.separator())
-        menu.addItem(sliderItem(title: "Yoğunluk", value: settings.intensity) { [weak self] value in
+        menu.addItem(sliderItem(title: "Intensity", value: settings.intensity) { [weak self] value in
             Settings.shared.intensity = value
             self?.controller.applyStyle()
         })
-        menu.addItem(sliderItem(title: "Hassasiyet", value: settings.sensitivity) { [weak self] value in
+        menu.addItem(sliderItem(title: "Sensitivity", value: settings.sensitivity) { [weak self] value in
             Settings.shared.sensitivity = value
             self?.controller.applyStyle()
         })
 
         menu.addItem(.separator())
-        let login = actionItem("Girişte Başlat", #selector(toggleLaunchAtLogin))
+        let login = actionItem("Launch at Login", #selector(toggleLaunchAtLogin))
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
 
         menu.addItem(.separator())
-        let quit = NSMenuItem(title: "Çıkış", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "Quit MenuTint", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
     }
 
     private var statusText: String {
         switch controller.status {
-        case .off: return "Kapalı"
-        case .starting: return "Başlatılıyor…"
-        case .running: return "Çalışıyor"
-        case .needsPermission: return "İzin gerekli"
-        case .failed(let message): return "Hata: \(message)"
+        case .off: return "Off"
+        case .starting: return "Starting…"
+        case .running: return "Running"
+        case .needsPermission: return "Permission needed"
+        case .failed(let message): return "Error: \(message)"
         }
     }
 
@@ -233,8 +233,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         } catch {
             let alert = NSAlert()
-            alert.messageText = "Girişte başlatma ayarlanamadı"
-            alert.informativeText = "\(error.localizedDescription)\n\nMenuTint.app'i Uygulamalar klasörüne taşıyıp tekrar deneyin."
+            alert.messageText = "Couldn't change Launch at Login"
+            alert.informativeText = "\(error.localizedDescription)\n\nMove MenuTint.app to the Applications folder and try again."
             NSApp.activate(ignoringOtherApps: true)
             alert.runModal()
         }
@@ -285,14 +285,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private static func makeEditMenu() -> NSMenu {
         let mainMenu = NSMenu()
         let editItem = NSMenuItem()
-        let edit = NSMenu(title: "Düzen")
-        edit.addItem(withTitle: "Geri Al", action: Selector(("undo:")), keyEquivalent: "z")
-        edit.addItem(withTitle: "Yinele", action: Selector(("redo:")), keyEquivalent: "Z")
+        let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
         edit.addItem(.separator())
-        edit.addItem(withTitle: "Kes", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "Kopyala", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "Yapıştır", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "Tümünü Seç", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = edit
         mainMenu.addItem(editItem)
         return mainMenu

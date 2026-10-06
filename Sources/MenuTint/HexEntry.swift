@@ -32,11 +32,11 @@ final class HexEntry: NSObject, NSTextFieldDelegate {
         accessory.addSubview(entry.field)
 
         let alert = NSAlert()
-        alert.messageText = "Renk Kodu Gir"
-        alert.informativeText = "Örnek: #FF8800, FF8800 veya #F80"
+        alert.messageText = "Enter Color Code"
+        alert.informativeText = "For example: #FF8800, FF8800 or #F80"
         alert.accessoryView = accessory
-        alert.addButton(withTitle: "Uygula")
-        alert.addButton(withTitle: "Vazgeç")
+        alert.addButton(withTitle: "Apply")
+        alert.addButton(withTitle: "Cancel")
         alert.window.initialFirstResponder = entry.field
 
         NSApp.activate(ignoringOtherApps: true)
@@ -45,7 +45,7 @@ final class HexEntry: NSObject, NSTextFieldDelegate {
                 return color.hexString
             }
             NSSound.beep()
-            alert.informativeText = "“\(entry.field.stringValue)” geçerli bir renk kodu değil. Örnek: #FF8800"
+            alert.informativeText = "“\(entry.field.stringValue)” is not a valid color code. For example: #FF8800"
         }
         return nil
     }
