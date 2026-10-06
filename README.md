@@ -1,50 +1,109 @@
-# MenuTint
+<a id="top"></a>
 
-macOS menü çubuğundaki **beyaz** simgeleri ve yazıları (saat, Wi‑Fi, pil, uygulama menüleri, üçüncü parti simgeler…) istediğin renge boyayan küçük bir menü çubuğu uygulaması.
+<p align="center">
+  <img src="Resources/AppIcon.png" width="144" height="144" alt="MenuTint app icon">
+</p>
 
-- Menü içinde **84 renklik palet** (tıkladığın an uygulanır, menü açık kalır)
-- **Renk kodu girme** (`#FF8800`, `FF8800`, `#F80`): yazarken canlı önizleme
-- **Gelişmiş Renk Seçici** (macOS renk tekerleği, kaydırıcılar, damlalık)
-- **Son Kullanılanlar** satırı ve akan **Gökkuşağı** modu: 11 stil (Klasik, Pastel, Derin, Neon, Koyu Mor, Gün Batımı, Okyanus, Orman, Ateş, Kutup Işıkları, Şeker), hız ve yön ayarı
-- **Yoğunluk**: rengin ne kadar güçlü uygulanacağı
-- **Hassasiyet**: yükseldikçe sönük/gri öğeler de boyanır
-- Birden fazla ekran desteği, girişte otomatik başlatma
-- Tıklamalar etkilenmez, menüler normal çalışır
+<h1 align="center">MenuTint</h1>
 
-## Nasıl çalışır?
+<p align="center">
+  <strong>Paint the macOS menu bar any color you like.</strong>
+</p>
 
-macOS, başka uygulamaların menü çubuğu simgelerinin rengini değiştirmek için genel bir API sunmuyor. MenuTint bu yüzden:
+<p align="center">
+  A small menu bar app that recolors the white icons and text in your menu bar (clock, Wi‑Fi, battery, app menus, third-party icons…) with the color you choose.<br>
+  An 84-color palette, hex codes, an advanced color picker, and a flowing rainbow mode, all in one menu.
+</p>
 
-1. **ScreenCaptureKit** ile menü çubuğu şeridini iki şekilde yakalar: ekranda göründüğü gibi, ve yalnızca menü çubuğu pencereleri (simgeler, menüler) siyah zemin üzerinde,
-2. İkincisinden her pikselin ne kadar "beyaz" olduğunu (kenar yumuşatması dahil) çıkarır ve beyaz kısmı doğrudan seçtiğin renkle değiştirir: `sonuç = görüntü − beyazlık × (1 − renk)`. Böylece beyaz simge tam olarak seçtiğin renk olur, kenarları gerçek arka planla doğal şekilde karışır,
-3. Bu yeniden çizilmiş görüntüyü menü çubuğunun hemen üstündeki şeffaf, tıklamaları geçiren bir pencerede gösterir. Simgelerin bulunduğu yerler tamamen kaplanır, yani alttaki beyaz simge görünmez.
+<p align="center">
+  <img alt="macOS 13 or later" src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&amp;logoColor=white">
+  <img alt="Apple Silicon and Intel" src="https://img.shields.io/badge/Apple_Silicon_%2B_Intel-universal-6B5CE7">
+  <img alt="Swift 5.9" src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&amp;logoColor=white">
+</p>
 
-Arka plan, duvar kağıdı ve zaten renkli olan simgeler (ör. yeşil pil) olduğu gibi kalır.
+<p align="center">
+  <a href="https://github.com/akwnnwastaken/menutint/releases/latest/download/MenuTint.zip"><strong>Download for macOS</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#installation"><strong>Installation</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#build-from-source"><strong>Build from source</strong></a>
+</p>
 
-## Gereksinimler
+---
 
-- macOS 13 Ventura veya üstü
-- Derlemek için Xcode ya da Xcode Command Line Tools (`xcode-select --install`)
+MenuTint lives in the menu bar as a palette icon. Click it to open a menu with the color palette, rainbow mode, and settings. The color you pick is applied immediately.
 
-## Kurulum
+## Features
 
-```bash
-git clone https://github.com/akwnnwastaken/menutint.git
-cd menutint
-./scripts/create-signing-cert.sh   # bir kez: izin her derlemede sıfırlanmasın
-./scripts/build-app.sh          # Apple Silicon + Intel (tam Xcode gerekir)
-# ./scripts/build-app.sh --native   # sadece bu Mac'in mimarisi (Command Line Tools yeterli)
-mv build/MenuTint.app /Applications/
-open /Applications/MenuTint.app
-```
+- **84-color palette:** Applied the moment you click; the menu stays open so you can try colors quickly.
+- **Hex color entry:** Accepts `#FF8800`, `FF8800`, and `#F80`, with a live preview while you type.
+- **Advanced color picker:** The macOS color wheel, sliders, and eyedropper.
+- **Recent colors:** Colors you entered as a code or picked with the advanced picker.
+- **Rainbow mode:** A flowing color gradient across the menu bar, with 11 styles (Classic, Pastel, Deep, Neon, Dark Purple, Sunset, Ocean, Forest, Fire, Aurora, Candy) and speed and direction controls.
+- **Intensity:** How strongly the color is applied.
+- **Sensitivity:** The higher it is, the more dim or gray items get painted too.
+- **Multiple displays:** Several displays are supported.
+- **Launch at login:** Starts automatically when your Mac starts.
+- **Normal interaction:** Clicks are not affected, and menus work as usual.
 
-Hazır derlenmiş sürüm: [Releases](https://github.com/akwnnwastaken/menutint/releases/latest) sayfasından `MenuTint.zip` dosyasını indir, açıp `MenuTint.app`'i Uygulamalar klasörüne taşı. Uygulama imzasız olduğu için ilk açılışta Gatekeeper uyarı verir. Bu durumda uygulamaya sağ tıklayıp **Aç**'ı seç ya da şunu çalıştır:
+## Downloads
+
+Current release: **v1.0.0**.
+
+| Platform | Package | Download | Release notes |
+| --- | --- | --- | --- |
+| macOS 13+ · Apple Silicon and Intel | `MenuTint.zip` | [Download ZIP](https://github.com/akwnnwastaken/menutint/releases/latest/download/MenuTint.zip) | [`v1.0.0`](https://github.com/akwnnwastaken/menutint/releases/tag/v1.0.0) |
+
+> [!NOTE]
+> The app is distributed unsigned, so Gatekeeper warns you the first time you open it. Follow the steps in [Installation](#installation).
+
+> [!NOTE]
+> The app's menu labels are currently in Turkish. The [Usage](#usage) table lists each Turkish label next to its English meaning.
+
+---
+
+## How does it work?
+
+macOS has no public API for changing the color of other apps' menu bar icons. So MenuTint:
+
+1. Captures the menu bar strip with **ScreenCaptureKit** in two ways: as it appears on screen, and with only the menu bar windows (icons, menus) on a black background.
+2. From the second capture, works out how "white" each pixel is (including anti-aliasing) and replaces the white part directly with your chosen color: `result = image − whiteness × (1 − color)`. A white icon becomes exactly your color, and its edges blend naturally with the real background.
+3. Shows this redrawn image in a transparent, click-through window right above the menu bar. Wherever icons sit it covers them completely, so the white icon underneath is not visible.
+
+The background, wallpaper, and icons that are already colored (for example, a green battery) are left as they are.
+
+## Requirements
+
+- macOS 13 Ventura or later
+- To build: Xcode or the Xcode Command Line Tools (`xcode-select --install`)
+
+## Installation
+
+### Prebuilt release (recommended)
+
+1. Download `MenuTint.zip` from the [Releases](https://github.com/akwnnwastaken/menutint/releases/latest) page.
+2. Unzip it and move `MenuTint.app` to your Applications folder.
+3. The app is unsigned, so Gatekeeper warns you the first time you open it. Right-click the app and choose **Open**, or run:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/MenuTint.app
 ```
 
-### Güncelleme
+4. Grant the [Screen Recording permission](#screen-recording-permission).
+
+### Build from source
+
+```bash
+git clone https://github.com/akwnnwastaken/menutint.git
+cd menutint
+./scripts/create-signing-cert.sh   # once: so the permission isn't reset on every build
+./scripts/build-app.sh             # Apple Silicon + Intel (needs full Xcode)
+# ./scripts/build-app.sh --native  # this Mac's architecture only (Command Line Tools are enough)
+mv build/MenuTint.app /Applications/
+open /Applications/MenuTint.app
+```
+
+### Updating
 
 ```bash
 cd menutint && git pull && ./scripts/build-app.sh
@@ -53,54 +112,80 @@ rm -rf /Applications/MenuTint.app && mv build/MenuTint.app /Applications/
 open /Applications/MenuTint.app
 ```
 
-### Ekran Kaydı izni
+### Screen Recording permission
 
-Menü çubuğunu görebilmek için uygulamanın **Ekran Kaydı** iznine ihtiyacı var:
+MenuTint needs the **Screen Recording** permission to see the menu bar:
 
-1. İlk açılışta çıkan izin penceresinde **Sistem Ayarları**'nı aç
-   (ya da MenuTint menüsünden **Ekran Kaydı İzni Ver…**),
-2. *Gizlilik ve Güvenlik → Ekran ve Sistem Sesi Kaydı* altında **MenuTint**'i aç,
-3. MenuTint menüsünden **MenuTint'i Yeniden Başlat**'a tıkla.
+1. In the permission dialog shown on first launch, open **System Settings**
+   (or choose **Ekran Kaydı İzni Ver…**, "Grant Screen Recording Permission…", from the MenuTint menu).
+2. Under *Privacy & Security → Screen & System Audio Recording*, turn on **MenuTint**.
+3. Choose **MenuTint'i Yeniden Başlat** ("Restart MenuTint") from the MenuTint menu.
 
-Görüntüler hiçbir yere kaydedilmez veya gönderilmez. Sadece anlık olarak boyanıp ekranda gösterilir.
+Captured images are never saved or sent anywhere. They are painted and shown on screen only momentarily.
 
-## Kullanım
+## Usage
 
-Menü çubuğundaki palet simgesine tıkla:
+Click the palette icon in the menu bar. The menu labels in the app are in Turkish; the English meaning is given in parentheses.
 
-| Öğe | Ne yapar |
+| Item | What it does |
 | --- | --- |
-| Renklendirme Açık | Boyamayı açar/kapatır |
-| Renk Paleti | 84 renkten birine tıkla; menü açık kalır, renkleri hızlıca deneyebilirsin |
-| Son Kullanılanlar | Kod ile girdiğin veya gelişmiş seçiciden aldığın renkler |
-| Gökkuşağı | Menü çubuğu boyunca soldan sağa akan renk geçişi. Seçiliyken **Gökkuşağı Stili** alt menüsü, **Akış Hızı** kaydırıcısı (en sol = sabit) ve **Ters Yön** seçeneği çıkar. Animasyonu macOS'un pencere sunucusu çalıştırır, MenuTint'e ek yük getirmez |
-| Renk Kodu Gir… | Hex kod yaz (`#FF8800`, `FF8800`, `#F80`). Yazarken önizlenir, Vazgeç eski renge döner |
-| Gelişmiş Renk Seçici… | macOS renk paneli: tekerlek, RGB/HSB kaydırıcıları, ekrandan renk alma |
-| Yoğunluk | %0 = orijinal beyaz, %100 = tam renk |
-| Hassasiyet | Gri/sönük öğelerin de boyanması için artır; menü çubuğu zemini de renkleniyorsa azalt |
-| Girişte Başlat | Mac açılınca otomatik başlar (uygulama `/Applications` içinde olmalı) |
+| Renklendirme Açık (Tinting On) | Turns tinting on or off |
+| Renk Paleti (Color Palette) | Click one of the 84 colors; the menu stays open so you can try colors quickly |
+| Son Kullanılanlar (Recent) | Colors you entered as a code or picked with the advanced picker |
+| Gökkuşağı (Rainbow) | A color gradient that flows left to right across the menu bar. When selected, a **Gökkuşağı Stili** (Rainbow Style) submenu, an **Akış Hızı** (Flow Speed) slider (far left = static), and a **Ters Yön** (Reverse Direction) option appear. macOS's window server runs the animation, so it adds no extra load to MenuTint |
+| Renk Kodu Gir… (Enter Color Code…) | Type a hex code (`#FF8800`, `FF8800`, `#F80`). It previews as you type, and Cancel returns to the previous color |
+| Gelişmiş Renk Seçici… (Advanced Color Picker…) | The macOS color panel: wheel, RGB/HSB sliders, and picking a color from the screen |
+| Yoğunluk (Intensity) | 0% = original white, 100% = full color |
+| Hassasiyet (Sensitivity) | Raise it to paint gray or dim items too; lower it if the menu bar background is being tinted as well |
+| Girişte Başlat (Launch at Login) | Starts automatically when your Mac starts (the app must be in `/Applications`) |
 
-## Bilinen sınırlamalar
+## Privacy
 
-- **Koyu menü çubuğu için tasarlandı** (beyaz simgeler). Açık modda simgeler zaten siyah olduğu için pek bir şey değişmez.
-- Menü çubuğu **otomatik gizleniyorsa** veya o ekranda menü çubuğu yoksa o ekran atlanır.
-- Yakalama yapıldığı için macOS menü çubuğunda mor bir **ekran kaydı göstergesi** gösterebilir. macOS 15 ve sonrasında da arada bir izni yeniden onaylamanı isteyebilir.
-- Bir simge değiştiği anda (ör. saat dakikası) boyalı katman bir kare (~16 ms) geriden gelebilir.
-- `create-signing-cert.sh` çalıştırılmadıysa her derlemede imza değişir ve Ekran Kaydı iznini sıfırlayıp yeniden vermen gerekir (`tccutil reset ScreenCapture io.github.akwnnwastaken.menutint`).
+Captured menu bar images are not written to disk and are not sent over the network; they are only painted and shown on screen momentarily.
 
-## Proje yapısı
+## Troubleshooting
 
+- **Nothing is being painted:** Check that the Screen Recording permission is on for MenuTint, then choose **MenuTint'i Yeniden Başlat** ("Restart MenuTint") from the menu.
+- **The permission resets on every build:** If `./scripts/create-signing-cert.sh` hasn't been run, the signature changes on every build. Run the script once; if needed, reset the permission:
+  ```bash
+  tccutil reset ScreenCapture io.github.akwnnwastaken.menutint
+  ```
+- **Gatekeeper blocks the app:** Right-click it and choose **Open**, or run the `xattr` command in [Installation](#installation).
+- **The menu bar background gets tinted too:** Lower **Hassasiyet** (Sensitivity).
+
+## Known limitations
+
+- **Designed for a dark menu bar** (white icons). In light mode the icons are already black, so little changes.
+- If the menu bar **auto-hides**, or a display has no menu bar, that display is skipped.
+- Because it captures the screen, macOS may show a purple **screen recording indicator** in the menu bar. On macOS 15 and later it may also occasionally ask you to confirm the permission again.
+- At the moment an icon changes (for example, the clock minute), the painted layer can lag one frame (~16 ms) behind.
+
+## Repository map
+
+```text
+menutint/
+├── Sources/MenuTint/
+│   ├── AppDelegate.swift      # menu bar icon and settings menu
+│   ├── TintController.swift   # manages displays, restart, permission state
+│   ├── MenuBarTinter.swift    # capture pipeline and overlay window for one display
+│   ├── FrameProcessor.swift   # receives ScreenCaptureKit frames
+│   ├── TintRenderer.swift     # tinting with Core Image
+│   ├── MaskLUT.swift          # 3D color table that decides which pixels count as "white"
+│   ├── Settings.swift         # persistent settings
+│   ├── SliderMenuView.swift   # in-menu slider
+│   ├── ColorGridView.swift    # in-menu color palette
+│   ├── HexEntry.swift         # hex code entry window
+│   └── RainbowStyle.swift     # rainbow styles
+├── Resources/                 # Info.plist and app icon
+├── scripts/
+│   ├── build-app.sh           # builds MenuTint.app
+│   └── create-signing-cert.sh # creates a local signing certificate
+├── .github/workflows/         # build.yml (build) and release.yml (publish a release)
+└── Package.swift              # SwiftPM definition (macOS 13+)
 ```
-Sources/MenuTint/
-  AppDelegate.swift      menü çubuğu simgesi ve ayar menüsü
-  TintController.swift   ekranları yönetir, yeniden başlatma, izin durumu
-  MenuBarTinter.swift    bir ekran için yakalama akışı + kaplama penceresi
-  FrameProcessor.swift   ScreenCaptureKit karelerini alır
-  TintRenderer.swift     Core Image ile boyama
-  MaskLUT.swift          hangi piksellerin "beyaz" sayılacağını belirleyen 3B renk tablosu
-  Settings.swift         kalıcı ayarlar
-  SliderMenuView.swift   menü içi kaydırıcı
-  ColorGridView.swift    menü içi renk paleti
-  HexEntry.swift         renk kodu giriş penceresi
-  RainbowStyle.swift     gökkuşağı stilleri
-```
+
+## Development
+
+`build.yml` builds the app on every push and pull request and uploads `MenuTint.zip` as an artifact. When a `v*` tag is pushed (or `release.yml` is run manually), `release.yml` publishes a release.
+
+<p align="right"><a href="#top">Back to top ↑</a></p>
