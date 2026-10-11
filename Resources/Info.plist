@@ -30,5 +30,7 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>MenuTint needs Screen Recording access to tint the menu bar. Captured frames are processed locally and aren’t saved or shared.</string>
 </dict>
 </plist>
