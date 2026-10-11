@@ -17,6 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var statusItem: NSStatusItem!
     private let controller = TintController()
+    private let permissionGate = ScreenCapturePermissionGate(
+        preflight: { CGPreflightScreenCaptureAccess() },
+        request: { CGRequestScreenCaptureAccess() }
+    )
     private let menu = NSMenu()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -29,11 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.delegate = self
         statusItem.menu = menu
 
-        if !CGPreflightScreenCaptureAccess() {
-            // Shows the system prompt and adds MenuTint to the Screen Recording list.
-            CGRequestScreenCaptureAccess()
-        }
-        controller.reload()
+        reloadTinting()
     }
 
     // MARK: NSMenuDelegate
@@ -162,6 +162,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func toggleEnabled() {
         Settings.shared.enabled.toggle()
+        reloadTinting()
+    }
+
+    private func reloadTinting() {
+        permissionGate.requestIfNeeded(tintingEnabled: Settings.shared.enabled)
+        // Reload independently preflights access before starting capture.
         controller.reload()
     }
 

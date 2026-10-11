@@ -8,6 +8,10 @@ let package = Package(
         .executableTarget(
             name: "MenuTint",
             path: "Sources/MenuTint"
+        ),
+        .testTarget(
+            name: "MenuTintTests",
+            dependencies: ["MenuTint"]
         )
     ]
 )
