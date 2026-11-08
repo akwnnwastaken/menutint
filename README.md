@@ -80,13 +80,9 @@ The background, wallpaper, and icons that are already colored (for example, a gr
 
 1. Download `MenuTint.zip` from the [Releases](https://github.com/akwnnwastaken/menutint/releases/latest) page.
 2. Unzip it and move `MenuTint.app` to your Applications folder.
-3. The app is unsigned, so Gatekeeper warns you the first time you open it. Right-click the app and choose **Open**, or run:
+3. For a Developer ID signed release, open MenuTint and grant [Screen Recording](#screen-recording-permission) when prompted.
 
-```bash
-xattr -dr com.apple.quarantine /Applications/MenuTint.app
-```
-
-4. Grant the [Screen Recording permission](#screen-recording-permission).
+Older releases were not notarized. If macOS rejects a download, leave Gatekeeper enabled and use a notarized release when available or build from reviewed source for development.
 
 ### Build from source
 
@@ -147,7 +143,7 @@ Captured menu bar images are not written to disk and are not sent over the netwo
   ```bash
   tccutil reset ScreenCapture io.github.akwnnwastaken.menutint
   ```
-- **Gatekeeper blocks the app:** Right-click it and choose **Open**, or run the `xattr` command in [Installation](#installation).
+- **Gatekeeper blocks the app:** Check that the file is from the official Releases page and that its published checksum matches. If macOS still rejects it, do not disable Gatekeeper.
 - **The menu bar background gets tinted too:** Lower **Hassasiyet** (Sensitivity).
 
 ## Known limitations
@@ -177,12 +173,12 @@ menutint/
 ├── scripts/
 │   ├── build-app.sh           # builds MenuTint.app
 │   └── create-signing-cert.sh # creates a local signing certificate
-├── .github/workflows/         # build.yml (build) and release.yml (publish a release)
+├── .github/workflows/         # build.yml (build) and release.yml (prepare a draft)
 └── Package.swift              # SwiftPM definition (macOS 13+)
 ```
 
 ## Development
 
-`build.yml` builds the app on every push and pull request and uploads `MenuTint.zip` as an artifact. When a `v*` tag is pushed (or `release.yml` is run manually), `release.yml` publishes a release.
+`build.yml` builds the app on every push and pull request and uploads `MenuTint.zip` as an artifact. Use the [macOS production release runbook](docs/MACOS-RELEASE.md) to prepare a signed draft. Publishing is a separate maintainer decision.
 
 <p align="right"><a href="#top">Back to top ↑</a></p>
